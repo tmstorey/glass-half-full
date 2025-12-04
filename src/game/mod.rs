@@ -1,9 +1,13 @@
 
 use bevy::prelude::*;
-use bevy::image::{ImageLoaderSettings, ImageSampler};
+//use bevy::image::{ImageLoaderSettings, ImageSampler};
 use crate::{
     screens::Screen,
 };
+
+
+mod parallax;
+use parallax::{parallax_background, Season};
 
 
 pub fn spawn_level(
@@ -16,12 +20,7 @@ pub fn spawn_level(
         Visibility::default(),
         DespawnOnExit(Screen::Gameplay),
         children![
-            Sprite::from_image(asset_server.load_with_settings(
-                "images/bg/summer-1.epng",
-                |settings: &mut ImageLoaderSettings| {
-                    settings.sampler = ImageSampler::nearest();
-                },
-            )),
+            parallax_background(Season::Summer, asset_server)
         ],
     ));
 }

@@ -13,6 +13,7 @@ rand = "0.9"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_bytes = "0.11.19"
 sha2 = "0.10.9"
+strum = { version = "0.27", features = ["derive"] }
 thiserror = "2.0.17"
 # Compile out low-severity logs to improve performance.
 # Remove these features if you want to profile your game with tracy.
