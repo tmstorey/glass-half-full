@@ -10,6 +10,7 @@ mod audio;
 mod dev_tools;
 mod game;
 mod menus;
+mod pixel_camera;
 mod screens;
 mod theme;
 
@@ -41,7 +42,8 @@ impl Plugin for AppPlugin {
                     }
                     .into(),
                     ..default()
-                }),
+                })
+                .set(ImagePlugin::default_nearest()),
         );
 
         // Add other plugins.
@@ -51,7 +53,9 @@ impl Plugin for AppPlugin {
             audio::plugin,
             #[cfg(feature = "dev")]
             dev_tools::plugin,
+            game::plugin,
             menus::plugin,
+            pixel_camera::plugin,
             screens::plugin,
             theme::plugin,
         ));
@@ -70,9 +74,6 @@ impl Plugin for AppPlugin {
         // Set up the `Pause` state.
         app.init_state::<Pause>();
         app.configure_sets(Update, PausableSystems.run_if(in_state(Pause(false))));
-
-        // Spawn the main camera.
-        app.add_systems(Startup, spawn_camera);
     }
 }
 
@@ -96,7 +97,3 @@ struct Pause(pub bool);
 /// A system set for systems that shouldn't run while the game is paused.
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
-
-fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera2d));
-}

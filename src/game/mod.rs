@@ -1,14 +1,22 @@
 
 use bevy::prelude::*;
-//use bevy::image::{ImageLoaderSettings, ImageSampler};
 use crate::{
     screens::Screen,
+    PausableSystems,
 };
 
-
 mod parallax;
-use parallax::{parallax_background, Season};
+use parallax::{parallax_background, scroll_parallax, Season};
 
+pub fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
+    app.add_systems(
+        Update,
+        scroll_parallax
+            .in_set(PausableSystems)
+            .run_if(in_state(Screen::Gameplay))
+    );
+}
 
 pub fn spawn_level(
     mut commands: Commands,

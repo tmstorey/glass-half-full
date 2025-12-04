@@ -7,6 +7,8 @@ use strum::Display;
 #[derive(Clone, Copy, Display, Reflect)]
 pub enum Season {
     Summer,
+    Autumn,
+    Winter,
 }
 
 #[derive(Component, Reflect)]
@@ -23,7 +25,7 @@ pub fn parallax_background(
     asset_server: Res<AssetServer>,
 ) -> impl Bundle {
     let mut children = vec![];
-    let scroll_factors = vec![0.1, 0.3, 0.5, 0.7, 0.9];
+    let scroll_factors = vec![0.1, 0.5, 0.7, 0.95, 1.0];
     for layer in 1..=5 {
         let z = layer as f32;
         let scroll_factor = scroll_factors[layer - 1];
@@ -39,6 +41,7 @@ pub fn parallax_background(
             Name::new(name),
             Sprite{
                 image,
+                custom_size: Some(Vec2::new(16_384.,346.)),
                 image_mode: SpriteImageMode::Tiled {
                     tile_x: true,
                     tile_y: false,
@@ -57,4 +60,17 @@ pub fn parallax_background(
             SpawnIter(children.into_iter()),
         ))
     )
+}
+
+pub fn scroll_parallax(
+    time: Res<Time>,
+    mut query: Query<(&ParallaxLayer, &mut Transform)>,
+) {
+    let base_speed = 50.0;
+
+    for (layer, mut transform) in &mut query {
+        let speed = base_speed * (1. - layer.scroll_factor);
+        transform.translation.x -= speed * time.delta_secs();
+        transform.translation.x = transform.translation.x % 1024.0;
+    }
 }
