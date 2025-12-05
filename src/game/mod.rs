@@ -1,14 +1,27 @@
 
 use bevy::prelude::*;
+use strum::Display;
 use crate::{
     screens::Screen,
     PausableSystems,
 };
 
 mod parallax;
-use parallax::{parallax_background, scroll_parallax, Season};
+mod tiles;
+use parallax::{parallax_background, scroll_parallax};
+
+
+#[derive(Clone, Copy, Debug, Default, Display, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
+pub enum Season {
+    #[default]
+    Summer,
+    Autumn,
+    Winter,
+}
+
 
 pub fn plugin(app: &mut App) {
+    app.init_resource::<Season>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
     app.add_systems(
         Update,

@@ -1,15 +1,8 @@
 
 use bevy::prelude::*;
 use bevy::image::{ImageLoaderSettings, ImageSampler};
-use strum::Display;
 
-
-#[derive(Clone, Copy, Display, Reflect)]
-pub enum Season {
-    Summer,
-    Autumn,
-    Winter,
-}
+use super::Season;
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
