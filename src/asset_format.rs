@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use std::sync::LazyLock;
 
 use bevy::asset::{
@@ -71,8 +73,8 @@ impl EncryptedAsset {
     #[cfg(feature = "dev_native")]
     pub fn encrypt(key: Key, plaintext: &[u8]) -> Result<EncryptedAsset, AssetFormatError> {
         let cipher = ChaCha8Poly1305::new(&key);
-        let nonce = ChaCha8Poly1305::generate_nonce()
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        let nonce =
+            ChaCha8Poly1305::generate_nonce().map_err(|e| std::io::Error::other(e.to_string()))?;
         let ciphertext = cipher.encrypt(&nonce, plaintext)?;
         let nonce = *nonce.as_ref();
         Ok(EncryptedAsset { ciphertext, nonce })
