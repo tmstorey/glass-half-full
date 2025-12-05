@@ -27,7 +27,6 @@ fn spawn_settings_menu(mut commands: Commands) {
         children![
             widget::header("Settings"),
             settings_grid(),
-            #[cfg(feature = "dev_native")]
             widget::button("Encrypt assets", crate::asset_format::encrypt_raw_assets),
             widget::button("Back", go_back_on_click),
         ],

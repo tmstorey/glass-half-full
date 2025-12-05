@@ -1,6 +1,5 @@
-
-use bevy::prelude::*;
 use bevy::image::{ImageLoaderSettings, ImageSampler};
+use bevy::prelude::*;
 
 use super::Season;
 
@@ -13,12 +12,9 @@ pub struct ParallaxLayer {
     pub scroll_factor: f32,
 }
 
-pub fn parallax_background(
-    season: Season,
-    asset_server: Res<AssetServer>,
-) -> impl Bundle {
+pub fn parallax_background(season: Season, asset_server: Res<AssetServer>) -> impl Bundle {
     let mut children = vec![];
-    let scroll_factors = vec![0.1, 0.5, 0.7, 0.95, 1.0];
+    let scroll_factors = [0.1, 0.5, 0.7, 0.95, 1.0];
     for layer in 1..=5 {
         let z = layer as f32;
         let scroll_factor = scroll_factors[layer - 1];
@@ -30,11 +26,15 @@ pub fn parallax_background(
             },
         );
         children.push((
-            ParallaxLayer { season, layer: z, scroll_factor },
+            ParallaxLayer {
+                season,
+                layer: z,
+                scroll_factor,
+            },
             Name::new(name),
-            Sprite{
+            Sprite {
                 image,
-                custom_size: Some(Vec2::new(16_384.,346.)),
+                custom_size: Some(Vec2::new(16_384., 346.)),
                 image_mode: SpriteImageMode::Tiled {
                     tile_x: true,
                     tile_y: false,
@@ -42,28 +42,23 @@ pub fn parallax_background(
                 },
                 ..default()
             },
-            Transform::from_xyz(0.0, 0.0, -z)
+            Transform::from_xyz(0.0, 0.0, -z),
         ));
     }
     (
         Name::new(format!("Parallax ({})", season)),
         Transform::default(),
         Visibility::default(),
-        Children::spawn((
-            SpawnIter(children.into_iter()),
-        ))
+        Children::spawn((SpawnIter(children.into_iter()),)),
     )
 }
 
-pub fn scroll_parallax(
-    time: Res<Time>,
-    mut query: Query<(&ParallaxLayer, &mut Transform)>,
-) {
+pub fn scroll_parallax(time: Res<Time>, mut query: Query<(&ParallaxLayer, &mut Transform)>) {
     let base_speed = 50.0;
 
     for (layer, mut transform) in &mut query {
         let speed = base_speed * (1. - layer.scroll_factor);
         transform.translation.x -= speed * time.delta_secs();
-        transform.translation.x = transform.translation.x % 1024.0;
+        transform.translation.x %= 1024.;
     }
 }

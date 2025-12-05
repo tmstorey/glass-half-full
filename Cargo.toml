@@ -6,7 +6,7 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.17" }
-chacha20poly1305 = { version = "0.10.1", features = ["reduced-round"] }
+chacha20poly1305 = { version = "0.11.0-rc.2", features = ["reduced-round"] }
 derive_more = { version = "2.1.0", features = ["from"] }
 flexbuffers = "25.9.23"
 leafwing-input-manager = "0.19.0"

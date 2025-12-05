@@ -1,6 +1,6 @@
-use bevy::prelude::*;
-use bevy::camera::visibility::RenderLayers;
 use bevy::camera::RenderTarget;
+use bevy::camera::visibility::RenderLayers;
+use bevy::prelude::*;
 use bevy::render::render_resource::{
     Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
 };
@@ -20,10 +20,7 @@ pub fn plugin(app: &mut App) {
     app.add_systems(Update, fit_canvas);
 }
 
-fn setup_pixel_camera(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-) {
+fn setup_pixel_camera(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let canvas_size = Extent3d {
         width: MAX_WIDTH,
         height: GAME_HEIGHT,
@@ -97,20 +94,17 @@ fn fit_canvas(
         return;
     };
     for window_resized in resize_messages.read() {
-        let (render_width, render_height) = calculate_render_size(
-            window_resized.width,
-            window_resized.height
-        );
+        let (render_width, render_height) =
+            calculate_render_size(window_resized.width, window_resized.height);
         let scale = calculate_scale(
             window_resized.width,
             window_resized.height,
             render_width,
-            render_height
+            render_height,
         );
         projection.scale = 1. / scale;
     }
 }
-
 
 /// Calculate the render target size based on window dimensions
 /// Maintains 320 pixels height and adjusts width based on aspect ratio

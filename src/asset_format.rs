@@ -1,33 +1,36 @@
-
 use std::sync::LazyLock;
 
+use bevy::asset::{
+    AssetLoader, LoadContext,
+    io::{Reader, VecReader},
+};
+use bevy::image::{
+    CompressedImageFormats, ImageFormatSetting, ImageLoader, ImageLoaderError, ImageLoaderSettings,
+};
 use bevy::prelude::*;
-use bevy::asset::{AssetLoader, LoadContext, io::{Reader, VecReader}};
-use bevy::image::{CompressedImageFormats, ImageFormatSetting, ImageLoader, ImageLoaderError, ImageLoaderSettings};
 
 use chacha20poly1305::{
     ChaCha8Poly1305, Key,
-    aead::{Aead, AeadCore, KeyInit, OsRng},
+    aead::{Aead, AeadCore, KeyInit},
 };
-use flexbuffers;
 use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use thiserror::Error;
-
 
 pub(super) fn plugin(app: &mut App) {
     app.init_asset_loader::<EncryptedImageLoader>();
 }
 
-
 static KEY: LazyLock<[u8; 32]> = LazyLock::new(|| {
     let mut hasher = Sha256::new();
     hasher.update(env!("CARGO_PKG_NAME").as_bytes());
-    hasher.update("All paid assets are listed in src/menus/credits.rs, \
-    along with a URL where you can purchase them for yourself.".as_bytes());
+    hasher.update(
+        "All paid assets are listed in src/menus/credits.rs, \
+along with a URL where you can purchase them for yourself."
+            .as_bytes(),
+    );
     hasher.finalize().into()
 });
-
 
 #[derive(Error, Debug)]
 pub enum AssetFormatError {
@@ -56,7 +59,6 @@ impl From<flexbuffers::ReaderError> for AssetFormatError {
     }
 }
 
-
 #[derive(Reflect, Serialize, Deserialize, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct EncryptedAsset {
     #[serde(with = "serde_bytes")]
@@ -69,7 +71,8 @@ impl EncryptedAsset {
     #[cfg(feature = "dev_native")]
     pub fn encrypt(key: Key, plaintext: &[u8]) -> Result<EncryptedAsset, AssetFormatError> {
         let cipher = ChaCha8Poly1305::new(&key);
-        let nonce = ChaCha8Poly1305::generate_nonce(&mut OsRng);
+        let nonce = ChaCha8Poly1305::generate_nonce()
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
         let ciphertext = cipher.encrypt(&nonce, plaintext)?;
         let nonce = *nonce.as_ref();
         Ok(EncryptedAsset { ciphertext, nonce })
@@ -82,7 +85,6 @@ impl EncryptedAsset {
         Ok(decrypted)
     }
 }
-
 
 #[derive(Default)]
 pub struct EncryptedImageLoader;
@@ -108,7 +110,9 @@ impl AssetLoader for EncryptedImageLoader {
             format: ImageFormatSetting::Guess,
             ..(settings.clone())
         };
-        let asset = image_loader.load(&mut vec_reader, &settings, load_context).await?;
+        let asset = image_loader
+            .load(&mut vec_reader, &settings, load_context)
+            .await?;
         Ok(asset)
     }
 
@@ -122,9 +126,8 @@ impl AssetLoader for EncryptedImageLoader {
 pub struct EncryptedAudioLoader;
 */
 
-
 #[cfg(feature = "dev_native")]
-pub fn encrypt_raw_assets(_: On<Pointer<Click>>) -> () {
+pub fn encrypt_raw_assets(_: On<Pointer<Click>>) {
     if let Err(e) = asset_encryption::encrypt_assets() {
         error!("Failed to encrypt raw assets: {}", e);
     } else {
@@ -132,11 +135,16 @@ pub fn encrypt_raw_assets(_: On<Pointer<Click>>) -> () {
     }
 }
 
+#[cfg(not(feature = "dev_native"))]
+pub fn encrypt_raw_assets(_: On<Pointer<Click>>) {
+    ()
+}
+
 #[cfg(feature = "dev_native")]
 mod asset_encryption {
+    use super::*;
     use std::fs;
     use std::path::Path;
-    use super::*;
 
     pub fn encrypt_assets() -> Result<(), AssetFormatError> {
         let raw_assets_dir = Path::new("raw_assets");
@@ -169,8 +177,9 @@ mod asset_encryption {
         assets_base: &Path,
         raw_assets_base: &Path,
     ) -> Result<(), AssetFormatError> {
-        let relative_path = source_path.strip_prefix(raw_assets_base)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        let relative_path = source_path
+            .strip_prefix(raw_assets_base)
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         let mut dest_path = assets_base.join(relative_path);
         if let Some(ext) = dest_path.extension() {
@@ -195,7 +204,11 @@ mod asset_encryption {
         let bytes = serializer.view();
         fs::write(&dest_path, bytes)?;
 
-        info!("Encrypted {} -> {}", source_path.display(), dest_path.display());
+        info!(
+            "Encrypted {} -> {}",
+            source_path.display(),
+            dest_path.display()
+        );
 
         Ok(())
     }

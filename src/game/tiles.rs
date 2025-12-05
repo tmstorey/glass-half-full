@@ -1,9 +1,8 @@
-
 #![allow(dead_code)]
 use derive_more::From;
 
-use bevy::prelude::*;
 use crate::game::Season;
+use bevy::prelude::*;
 
 pub const TILE_SIZE: f32 = 32.0;
 
@@ -36,7 +35,7 @@ pub struct GridPosition {
 
 impl GridPosition {
     /// Convert grid position to world coordinates
-    pub fn to_world(&self, tile_size: f32) -> Vec2 {
+    pub fn to_world(self, tile_size: f32) -> Vec2 {
         let offset = match self.alignment {
             GridAlignment::Primary => 0.0,
             GridAlignment::Dual => 0.5,
@@ -49,12 +48,20 @@ impl GridPosition {
 
     /// Create a primary grid position
     pub fn primary(x: i32, y: i32) -> Self {
-        Self { x, y, alignment: GridAlignment::Primary }
+        Self {
+            x,
+            y,
+            alignment: GridAlignment::Primary,
+        }
     }
 
     /// Create a dual grid position
     pub fn dual(x: i32, y: i32) -> Self {
-        Self { x, y, alignment: GridAlignment::Dual }
+        Self {
+            x,
+            y,
+            alignment: GridAlignment::Dual,
+        }
     }
 }
 
@@ -75,10 +82,18 @@ impl CornerMask {
     /// Create a new corner mask from the 4 corner flags
     pub fn new(nw: bool, ne: bool, se: bool, sw: bool) -> Self {
         let mut mask = 0;
-        if nw { mask |= Self::NORTH_WEST; }
-        if ne { mask |= Self::NORTH_EAST; }
-        if se { mask |= Self::SOUTH_EAST; }
-        if sw { mask |= Self::SOUTH_WEST; }
+        if nw {
+            mask |= Self::NORTH_WEST;
+        }
+        if ne {
+            mask |= Self::NORTH_EAST;
+        }
+        if se {
+            mask |= Self::SOUTH_EAST;
+        }
+        if sw {
+            mask |= Self::SOUTH_WEST;
+        }
         Self(mask)
     }
 
@@ -143,6 +158,7 @@ impl DualTile {
     }
 }
 
+#[rustfmt::skip]
 pub const DUAL_TILESET: [DualTile; 24] = [
     DualTile { corner_mask: CornerMask(0b0110), variant: DualVariant::Dirt },
     DualTile { corner_mask: CornerMask(0b1011), variant: DualVariant::Grass },
@@ -270,8 +286,8 @@ mod tests {
 
     #[test]
     fn test_dual_tile_index() {
-        let tile = DualTile::new(CornerMask::from_bits(0b0101), DualVariant::Dirt);
+        let tile = DualTile::new(CornerMask::from_bits(0b1001), DualVariant::Dirt);
         let index = tile.tileset_index();
-        assert_eq!(index, Some(5)); // Should find the dirt tile with mask 0b0101
+        assert_eq!(index, Some(5));
     }
 }

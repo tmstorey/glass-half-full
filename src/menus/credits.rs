@@ -28,9 +28,7 @@ fn spawn_credits_menu(mut commands: Commands) {
 }
 
 fn created_by() -> impl Bundle {
-    grid(vec![
-        ["tmstorey", "Programmer"],
-    ])
+    grid(vec![["tmstorey", "Programmer"]])
 }
 
 fn assets() -> impl Bundle {
