@@ -1,6 +1,6 @@
 
 #![allow(dead_code)]
-use std::from::From;
+use derive_more::From;
 
 use bevy::prelude::*;
 use crate::game::Season;
