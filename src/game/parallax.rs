@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use super::Season;
 
-#[derive(Component, Reflect)]
+#[derive(Component, Debug, Default, PartialEq, PartialOrd, Reflect)]
 #[reflect(Component)]
 pub struct ParallaxLayer {
     pub season: Season,
@@ -54,7 +54,7 @@ pub fn parallax_background(season: Season, asset_server: Res<AssetServer>) -> im
 }
 
 pub fn scroll_parallax(time: Res<Time>, mut query: Query<(&ParallaxLayer, &mut Transform)>) {
-    let base_speed = 50.0;
+    let base_speed = 5.0;
 
     for (layer, mut transform) in &mut query {
         let speed = base_speed * (1. - layer.scroll_factor);

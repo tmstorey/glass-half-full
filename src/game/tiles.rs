@@ -1,7 +1,7 @@
-#![allow(dead_code)]
 use derive_more::From;
 
-use crate::game::Season;
+use crate::{PausableSystems, asset_tracking::LoadResource, game::Season, screens::Screen};
+use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 
 pub const TILE_SIZE: f32 = 32.0;
@@ -9,24 +9,42 @@ pub const TILE_SIZE: f32 = 32.0;
 pub const TILESET_COLUMNS: u32 = 8;
 pub const TILESET_ROWS: u32 = 3;
 
+pub fn plugin(app: &mut App) {
+    app.load_resource::<TilesetAtlases>();
+    app.add_systems(
+        Update,
+        (
+            update_dual_tiles,
+            sync_grid_to_transform,
+            spawn_terrain_on_click,
+        )
+            .in_set(PausableSystems)
+            .run_if(in_state(Screen::Gameplay)),
+    );
+}
+
 /// Terrain tiles on the primary grid that should generate dual tiles
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(
+    Component, Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource,
+)]
 pub enum TerrainTile {
+    #[default]
     Grass,
     Dirt,
 }
 
 /// Grid alignment mode - primary grid or dual grid (offset by 0.5, 0.5)
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Ord, PartialOrd, Hash, Reflect)]
 pub enum GridAlignment {
     /// Aligned to primary grid at integer coordinates (for game objects)
+    #[default]
     Primary,
     /// Aligned to dual grid, offset by (0.5, 0.5) (for corners/edges)
     Dual,
 }
 
 /// Position on the grid system
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq, Ord, PartialOrd, Hash, Reflect)]
 pub struct GridPosition {
     pub x: i32,
     pub y: i32,
@@ -67,9 +85,10 @@ impl GridPosition {
 
 /// Corner flags for tile autotiling
 /// Each bit represents whether a tile exists at one of the 4 adjacent primary grid cells
-#[derive(Clone, Copy, Debug, PartialEq, Eq, From)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Ord, PartialOrd, From, Hash, Reflect)]
 pub struct CornerMask(u8);
 
+#[allow(dead_code)]
 impl CornerMask {
     pub const NORTH_WEST: u8 = 0b1000;
     pub const NORTH_EAST: u8 = 0b0100;
@@ -116,11 +135,28 @@ impl CornerMask {
     pub fn count(&self) -> u32 {
         self.0.count_ones()
     }
+
+    /// Calculate corner mask for a dual grid position based on neighboring primary grid tiles
+    pub fn calculate(dual_x: i32, dual_y: i32, has_tile: impl Fn(i32, i32) -> bool) -> CornerMask {
+        // A dual grid position at (dual_x, dual_y) is surrounded by 4 primary grid cells:
+        // NW: (dual_x - 1, dual_y)
+        // NE: (dual_x, dual_y)
+        // SW: (dual_x - 1, dual_y - 1)
+        // SE: (dual_x, dual_y - 1)
+
+        let nw = has_tile(dual_x - 1, dual_y);
+        let ne = has_tile(dual_x, dual_y);
+        let sw = has_tile(dual_x - 1, dual_y - 1);
+        let se = has_tile(dual_x, dual_y - 1);
+
+        CornerMask::new(nw, ne, se, sw)
+    }
 }
 
 /// Dual tile variant types
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Reflect)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Ord, PartialOrd, Hash, Reflect)]
 pub enum DualVariant {
+    #[default]
     Dirt,
     Grass,
     DirtToGrass,
@@ -209,12 +245,37 @@ pub fn get_variants_for_mask(corner_mask: u8) -> Vec<DualVariant> {
 }
 
 /// Resource to hold season tileset texture atlases
-#[derive(Resource)]
+#[derive(Resource, Asset, Clone, Reflect)]
+#[reflect(Resource)]
 pub struct TilesetAtlases {
+    #[dependency]
     pub layout: Handle<TextureAtlasLayout>,
+    #[dependency]
     pub summer: Handle<Image>,
+    #[dependency]
     pub autumn: Handle<Image>,
+    #[dependency]
     pub winter: Handle<Image>,
+}
+
+impl FromWorld for TilesetAtlases {
+    fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+        let layout = TextureAtlasLayout::from_grid(
+            UVec2::new(TILE_SIZE as u32, TILE_SIZE as u32),
+            TILESET_COLUMNS,
+            TILESET_ROWS,
+            None,
+            None,
+        );
+        let layout = assets.add(layout);
+        Self {
+            layout,
+            summer: assets.load("images/tiles/summer.epng"),
+            autumn: assets.load("images/tiles/autumn.epng"),
+            winter: assets.load("images/tiles/winter.epng"),
+        }
+    }
 }
 
 impl TilesetAtlases {
@@ -228,7 +289,7 @@ impl TilesetAtlases {
     }
 }
 
-/// System to sync grid positions to transform components
+/// Sync grid positions to transform components
 pub fn sync_grid_to_transform(
     mut query: Query<(&GridPosition, &mut Transform), Changed<GridPosition>>,
 ) {
@@ -239,24 +300,158 @@ pub fn sync_grid_to_transform(
     }
 }
 
-/// Calculate corner mask for a dual grid position based on neighboring primary grid tiles
-pub fn calculate_corner_mask(
-    dual_x: i32,
-    dual_y: i32,
-    has_tile: impl Fn(i32, i32) -> bool,
-) -> CornerMask {
-    // A dual grid position at (dual_x, dual_y) is surrounded by 4 primary grid cells:
-    // NW: (dual_x - 1, dual_y)
-    // NE: (dual_x, dual_y)
-    // SW: (dual_x - 1, dual_y - 1)
-    // SE: (dual_x, dual_y - 1)
+/// Automatically generates/updates dual tiles based on terrain tiles
+pub fn update_dual_tiles(
+    mut commands: Commands,
+    terrain_query: Query<(Ref<TerrainTile>, Ref<GridPosition>), Without<DualTile>>,
+    dual_query: Query<(Entity, &GridPosition), With<DualTile>>,
+    tileset_atlases: If<Res<TilesetAtlases>>,
+    season: Res<Season>,
+) {
+    // Check if any terrain tiles changed
+    let has_changes = terrain_query
+        .iter()
+        .any(|(tile, pos)| tile.is_changed() || pos.is_changed());
 
-    let nw = has_tile(dual_x - 1, dual_y);
-    let ne = has_tile(dual_x, dual_y);
-    let sw = has_tile(dual_x - 1, dual_y - 1);
-    let se = has_tile(dual_x, dual_y - 1);
+    if !has_changes {
+        return;
+    }
 
-    CornerMask::new(nw, ne, se, sw)
+    // Build a spatial map of all terrain tiles for fast lookups
+    let mut terrain_map: HashMap<(i32, i32), TerrainTile> = HashMap::new();
+    let mut dual_updated = HashSet::new();
+
+    for (terrain, pos) in terrain_query.iter() {
+        if pos.alignment == GridAlignment::Primary {
+            terrain_map.insert((pos.x, pos.y), *terrain);
+
+            // If this terrain tile changed, mark its 4 adjacent dual corners for update
+            if pos.is_changed() {
+                // Each terrain tile at (x, y) affects 4 dual grid positions:
+                // (x, y), (x+1, y), (x, y+1), (x+1, y+1)
+                dual_updated.insert((pos.x, pos.y));
+                dual_updated.insert((pos.x + 1, pos.y));
+                dual_updated.insert((pos.x, pos.y + 1));
+                dual_updated.insert((pos.x + 1, pos.y + 1));
+            }
+        }
+    }
+
+    // Remove existing dual tiles at positions that need updating
+    for (entity, pos) in dual_query.iter() {
+        if pos.alignment == GridAlignment::Dual && dual_updated.contains(&(pos.x, pos.y)) {
+            commands.entity(entity).despawn();
+        }
+    }
+
+    // Regenerate dual tiles at marked positions
+    for (dual_x, dual_y) in dual_updated {
+        let corner_mask =
+            CornerMask::calculate(dual_x, dual_y, |x, y| terrain_map.contains_key(&(x, y)));
+
+        // Only spawn a dual tile if at least one corner is filled
+        if corner_mask.count() == 0 {
+            continue;
+        }
+
+        let sw_terrain = terrain_map.get(&(dual_x - 1, dual_y - 1));
+        let se_terrain = terrain_map.get(&(dual_x, dual_y - 1));
+
+        let variants = get_variants_for_mask(corner_mask.bits());
+
+        let variant = match (sw_terrain, se_terrain) {
+            (Some(TerrainTile::Grass), Some(TerrainTile::Grass)) => DualVariant::Grass,
+            (None, Some(TerrainTile::Grass)) => DualVariant::Grass,
+            (Some(TerrainTile::Grass), None) => DualVariant::Grass,
+            (Some(TerrainTile::Dirt), Some(TerrainTile::Grass)) => DualVariant::GrassToDirt,
+            (Some(TerrainTile::Grass), Some(TerrainTile::Dirt)) => DualVariant::DirtToGrass,
+            _ => DualVariant::Dirt,
+        };
+        let variant = if variants.contains(&variant) {
+            variant
+        } else {
+            DualVariant::Dirt
+        };
+
+        let dual_tile = DualTile::new(corner_mask, variant);
+
+        if let Some(atlas_index) = dual_tile.atlas_index() {
+            let position = GridPosition::dual(dual_x, dual_y);
+            let world_pos = position.to_world(TILE_SIZE);
+
+            commands.spawn((
+                Name::new(format!(
+                    "DualTile {:?} at ({}, {})",
+                    variant, dual_x, dual_y
+                )),
+                position,
+                dual_tile,
+                Sprite::from_atlas_image(
+                    tileset_atlases.get_texture(*season),
+                    TextureAtlas {
+                        layout: tileset_atlases.layout.clone(),
+                        index: atlas_index,
+                    },
+                ),
+                Transform::from_translation(world_pos.extend(0.0)),
+            ));
+        }
+    }
+}
+
+/// Spawn or remove terrain tiles on mouse click
+pub fn spawn_terrain_on_click(
+    mut commands: Commands,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<crate::pixel_camera::MainCamera>>,
+    window_query: Query<&Window>,
+    terrain_query: Query<(Entity, &GridPosition), With<TerrainTile>>,
+) {
+    if !mouse_buttons.just_pressed(MouseButton::Left)
+        && !mouse_buttons.just_pressed(MouseButton::Right)
+    {
+        return;
+    }
+
+    let Ok(window) = window_query.single() else {
+        return;
+    };
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+
+    let Ok((camera, camera_transform)) = camera_query.single() else {
+        return;
+    };
+
+    let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
+        return;
+    };
+
+    let grid_x = (world_pos.x / TILE_SIZE).floor() as i32;
+    let grid_y = (world_pos.y / TILE_SIZE).floor() as i32;
+    let grid_pos = GridPosition::primary(grid_x, grid_y);
+
+    // Left click: spawn grass, Right click: remove
+    if mouse_buttons.just_pressed(MouseButton::Left) {
+        // Check if there's already a terrain tile at this position
+        let tile_exists = terrain_query.iter().any(|(_, pos)| *pos == grid_pos);
+
+        if !tile_exists {
+            commands.spawn((
+                Name::new(format!("TerrainTile Grass at ({}, {})", grid_x, grid_y)),
+                grid_pos,
+                TerrainTile::Grass,
+            ));
+        }
+    } else if mouse_buttons.just_pressed(MouseButton::Right) {
+        // Remove terrain tile at this position
+        for (entity, pos) in terrain_query.iter() {
+            if *pos == grid_pos {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
 }
 
 #[cfg(test)]

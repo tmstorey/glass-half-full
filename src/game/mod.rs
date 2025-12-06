@@ -25,6 +25,7 @@ pub fn plugin(app: &mut App) {
             .in_set(PausableSystems)
             .run_if(in_state(Screen::Gameplay)),
     );
+    app.add_plugins(tiles::plugin);
 }
 
 pub fn spawn_level(mut commands: Commands, asset_server: Res<AssetServer>) {
