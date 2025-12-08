@@ -2,6 +2,7 @@ use crate::{
     game::{
         PlayerLevel,
         character::{COLUMNS, CharacterLayer, CharacterLayers, LayerType, LayerVariant, ROWS},
+        controls::Action,
     },
     menus::Menu,
     screens::Screen,
@@ -14,6 +15,7 @@ use bevy::{
     prelude::*,
     ui_widgets::{ControlOrientation, CoreScrollbarDragState, CoreScrollbarThumb, Scrollbar},
 };
+use leafwing_input_manager::prelude::*;
 use std::sync::LazyLock;
 
 pub static BODY_COLOURS: LazyLock<Vec<Color>> = LazyLock::new(|| {
@@ -501,9 +503,11 @@ fn go_back_on_click(_: On<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>
     next_menu.set(Menu::Pause);
 }
 
-fn go_back(input: Res<ButtonInput<KeyCode>>, mut next_menu: ResMut<NextState<Menu>>) {
-    if input.just_pressed(KeyCode::Escape) {
-        next_menu.set(Menu::Pause);
+fn go_back(action_query: Query<&ActionState<Action>>, mut next_menu: ResMut<NextState<Menu>>) {
+    if let Ok(action_state) = action_query.single() {
+        if action_state.just_pressed(&Action::Menu) {
+            next_menu.set(Menu::Pause);
+        }
     }
 }
 

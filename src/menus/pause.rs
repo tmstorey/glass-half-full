@@ -1,15 +1,13 @@
 //! The pause menu.
 
-use bevy::{input::common_conditions::input_just_pressed, prelude::*};
+use bevy::prelude::*;
+use leafwing_input_manager::prelude::*;
 
-use crate::{menus::Menu, screens::Screen, theme::widget};
+use crate::{game::controls::Action, menus::Menu, screens::Screen, theme::widget};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_pause_menu);
-    app.add_systems(
-        Update,
-        go_back.run_if(in_state(Menu::Pause).and(input_just_pressed(KeyCode::Escape))),
-    );
+    app.add_systems(Update, go_back.run_if(in_state(Menu::Pause)));
 }
 
 fn spawn_pause_menu(mut commands: Commands) {
@@ -43,6 +41,10 @@ fn quit_to_title(_: On<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen
     next_screen.set(Screen::Title);
 }
 
-fn go_back(mut next_menu: ResMut<NextState<Menu>>) {
-    next_menu.set(Menu::None);
+fn go_back(action_query: Query<&ActionState<Action>>, mut next_menu: ResMut<NextState<Menu>>) {
+    if let Ok(action_state) = action_query.single() {
+        if action_state.just_pressed(&Action::Menu) {
+            next_menu.set(Menu::None);
+        }
+    }
 }
