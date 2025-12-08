@@ -2,6 +2,7 @@ use crate::{PausableSystems, screens::Screen};
 use bevy::prelude::*;
 use strum::Display;
 
+mod character;
 mod parallax;
 mod tiles;
 use parallax::{parallax_background, scroll_parallax};
@@ -26,6 +27,7 @@ pub fn plugin(app: &mut App) {
             .run_if(in_state(Screen::Gameplay)),
     );
     app.add_plugins(tiles::plugin);
+    app.add_plugins(character::plugin);
 }
 
 pub fn spawn_level(mut commands: Commands, asset_server: Res<AssetServer>) {

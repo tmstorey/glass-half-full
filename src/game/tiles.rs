@@ -394,6 +394,7 @@ pub fn update_dual_tiles(
                     },
                 ),
                 Transform::from_translation(world_pos.extend(0.0)),
+                DespawnOnExit(Screen::Gameplay),
             ));
         }
     }

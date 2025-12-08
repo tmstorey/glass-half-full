@@ -24,6 +24,13 @@ fn spawn_settings_menu(mut commands: Commands) {
         widget::ui_root("Settings Menu"),
         GlobalZIndex(2),
         DespawnOnExit(Menu::Settings),
+        #[cfg(not(feature = "dev_native"))]
+        children![
+            widget::header("Settings"),
+            settings_grid(),
+            widget::button("Back", go_back_on_click),
+        ],
+        #[cfg(feature = "dev_native")]
         children![
             widget::header("Settings"),
             settings_grid(),
