@@ -2,7 +2,7 @@ use crate::{PausableSystems, screens::Screen};
 use bevy::prelude::*;
 use strum::Display;
 
-mod character;
+pub mod character;
 mod parallax;
 mod tiles;
 use parallax::{parallax_background, scroll_parallax};
@@ -17,8 +17,12 @@ pub enum Season {
     Winter,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
+pub struct PlayerLevel(pub u8);
+
 pub fn plugin(app: &mut App) {
     app.init_resource::<Season>();
+    app.init_resource::<PlayerLevel>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
     app.add_systems(
         Update,

@@ -1,5 +1,6 @@
 //! The game's menus and transitions between them.
 
+mod character_select;
 mod credits;
 mod main;
 mod pause;
@@ -12,6 +13,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins((
         credits::plugin,
+        character_select::plugin,
         main::plugin,
         settings::plugin,
         pause::plugin,
@@ -24,6 +26,7 @@ pub enum Menu {
     None,
     Main,
     Credits,
+    CharacterSelect,
     Settings,
     Pause,
 }

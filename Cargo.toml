@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.17" }
+bevy = { version = "0.17", features = ["experimental_bevy_ui_widgets"]}
 chacha20poly1305 = { version = "0.11.0-rc.2", features = ["reduced-round"] }
 derive_more = { version = "2.1.0", features = ["from"] }
 flexbuffers = "25.9.23"

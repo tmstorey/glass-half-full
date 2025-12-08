@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::{PausableSystems, screens::Screen};
 use bevy::prelude::*;
 use std::sync::LazyLock;
@@ -7,17 +5,12 @@ use std::time::Duration;
 use strum::Display;
 
 /// Component for character facing direction
-#[derive(Component, Debug, Reflect, Clone, Copy, PartialEq)]
+#[derive(Component, Debug, Default, Reflect, Clone, Copy, PartialEq)]
 #[reflect(Component)]
 pub enum Direction {
     Left,
+    #[default]
     Right,
-}
-
-impl Default for Direction {
-    fn default() -> Self {
-        Self::Right
-    }
 }
 
 pub static ROWS: u32 = 7;
@@ -36,28 +29,32 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(OnEnter(Screen::Gameplay), spawn_character);
 
-    app.add_systems(Update, (
-        update_character_animation_timer,
-        sync_layer_animations,
-    )
-    .in_set(PausableSystems)
-    .run_if(in_state(Screen::Gameplay))
-    .chain());
+    app.add_systems(
+        Update,
+        (update_character_animation_timer, sync_layer_animations)
+            .in_set(PausableSystems)
+            .run_if(in_state(Screen::Gameplay))
+            .chain(),
+    );
 }
 
 /// Component that defines which sprite layers make up a character
-#[derive(Component, Reflect, Clone)]
+#[derive(Component, Clone, Debug, Reflect)]
 #[reflect(Component)]
 pub struct CharacterLayers {
     /// Ordered list of sprite layers (bottom to top)
     pub layers: Vec<CharacterLayer>,
 }
 
+#[allow(dead_code)]
 impl CharacterLayers {
     /// Creates a new CharacterLayers from a vec of layers.
     pub fn new(mut layers: Vec<CharacterLayer>) -> Self {
         // Ensure Body layer is present
-        if !layers.iter().any(|layer| layer.layer_type == LayerType::Body) {
+        if !layers
+            .iter()
+            .any(|layer| layer.layer_type == LayerType::Body)
+        {
             layers.push(CharacterLayer {
                 layer_type: LayerType::Body,
                 item_name: None,
@@ -66,7 +63,10 @@ impl CharacterLayers {
         }
 
         // Ensure Underclothes layer is present
-        if !layers.iter().any(|layer| layer.layer_type == LayerType::Underclothes) {
+        if !layers
+            .iter()
+            .any(|layer| layer.layer_type == LayerType::Underclothes)
+        {
             layers.push(CharacterLayer {
                 layer_type: LayerType::Underclothes,
                 item_name: Some("bodice1".to_string()),
@@ -114,7 +114,7 @@ impl Default for CharacterLayers {
     }
 }
 
-#[derive(Clone, Copy, Reflect)]
+#[derive(Clone, Copy, Debug, Reflect)]
 pub enum LayerVariant {
     HairColour(u8),
     ClothingColour(u8),
@@ -122,15 +122,17 @@ pub enum LayerVariant {
 }
 
 impl LayerVariant {
-    pub fn to_path_string(&self) -> String {
+    pub fn to_path_string(self) -> String {
         match self {
-            _ => format!(""),
+            LayerVariant::HairColour(index) => (*HAIR_COLOURS)[index as usize].to_string(),
+            LayerVariant::ClothingColour(index) => (*CLOTHING_COLOURS)[index as usize].to_string(),
+            LayerVariant::Variant(number) => number.to_string(),
         }
     }
 }
 
 /// Represents a single sprite layer in the character
-#[derive(Component, Clone, Reflect)]
+#[derive(Component, Clone, Debug, Reflect)]
 #[reflect(Component)]
 pub struct CharacterLayer {
     /// Type of layer
@@ -143,6 +145,9 @@ pub struct CharacterLayer {
 
 impl CharacterLayer {
     pub fn texture_path(&self) -> Result<String, ()> {
+        if self.item_name.is_none() && self.variant.is_none() {
+            return Err(());
+        }
         let mut path = format!(
             "images/character/{}",
             self.layer_type.to_string().to_lowercase()
@@ -153,13 +158,7 @@ impl CharacterLayer {
         }
         if let Some(variant) = self.variant {
             path.push('/');
-            let variant_string = match variant {
-                LayerVariant::HairColour(index) => (*HAIR_COLOURS)[index as usize].to_string(),
-                LayerVariant::ClothingColour(index) => {
-                    (*CLOTHING_COLOURS)[index as usize].to_string()
-                }
-                LayerVariant::Variant(number) => number.to_string(),
-            };
+            let variant_string = variant.to_path_string();
             path.push_str(&variant_string);
         }
         path.push_str(".epng");
@@ -358,6 +357,7 @@ impl AnimationState {
     }
 }
 
+#[allow(dead_code)]
 impl CharacterAnimation {
     pub fn new(state: AnimationState) -> Self {
         let (_, _, duration) = state.get_animation_config();
@@ -408,10 +408,7 @@ impl CharacterAnimation {
 pub struct Character;
 
 /// Spawns a layered character with all its sprite layers as children
-pub fn spawn_character(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
     let animation = CharacterAnimation::new(AnimationState::Idle);
     let character_layers = CharacterLayers::default();
     let position = Vec3::new(5., 5., 0.);
@@ -432,15 +429,9 @@ pub fn spawn_character(
 
     // Spawn each layer as a child sprite
     for layer in character_layers.layers.iter() {
-        let texture = asset_server.load(&layer.texture_path().unwrap());
+        let texture = asset_server.load(layer.texture_path().unwrap());
 
-        let layout = TextureAtlasLayout::from_grid(
-            UVec2::new(80, 64),
-            COLUMNS,
-            ROWS,
-            None,
-            None,
-        );
+        let layout = TextureAtlasLayout::from_grid(UVec2::new(80, 64), COLUMNS, ROWS, None, None);
 
         let layer_entity = commands
             .spawn((
@@ -500,6 +491,7 @@ pub fn sync_layer_animations(
     }
 }
 
+#[expect(dead_code)]
 /// Example system to change animation based on velocity (you'd integrate this with your movement)
 pub fn update_character_animation_from_movement(
     mut _query: Query<(&Transform, &mut CharacterAnimation), With<Character>>,

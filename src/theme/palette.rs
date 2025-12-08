@@ -15,3 +15,5 @@ pub static BUTTON_HOVERED_BACKGROUND: LazyLock<Color> =
 
 pub static BUTTON_PRESSED_BACKGROUND: LazyLock<Color> =
     LazyLock::new(|| Srgba::hex("#3d4999").unwrap().into());
+
+pub static TRANSPARENT: LazyLock<Color> = LazyLock::new(|| Srgba::hex("#00000000").unwrap().into());
