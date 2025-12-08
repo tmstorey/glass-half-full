@@ -1,5 +1,6 @@
 use crate::{PausableSystems, screens::Screen};
 use bevy::prelude::*;
+use bevy_pkv::prelude::*;
 use strum::Display;
 
 pub mod character;
@@ -24,6 +25,7 @@ pub enum Season {
 pub struct PlayerLevel(pub u8);
 
 pub fn plugin(app: &mut App) {
+    app.insert_resource(PkvStore::new("tmstorey", "glass-half-full"));
     app.init_resource::<Season>();
     app.init_resource::<PlayerLevel>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);

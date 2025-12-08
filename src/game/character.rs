@@ -1,6 +1,8 @@
 use crate::{PausableSystems, screens::Screen};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use bevy_pkv::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 use std::time::Duration;
 use strum::Display;
@@ -31,11 +33,17 @@ pub fn plugin(app: &mut App) {
     app.register_type::<AnimationState>();
     app.register_type::<Direction>();
 
+    app.init_persistent_resource::<CharacterLayers>();
+
     app.add_systems(OnEnter(Screen::Gameplay), spawn_character);
 
     app.add_systems(
         Update,
-        (update_character_animation_timer, sync_layer_animations)
+        (
+            update_character_animation_timer,
+            sync_layer_animations,
+            update_character,
+        )
             .in_set(PausableSystems)
             .run_if(in_state(Screen::Gameplay))
             .chain(),
@@ -43,7 +51,7 @@ pub fn plugin(app: &mut App) {
 }
 
 /// Component that defines which sprite layers make up a character
-#[derive(Component, Clone, Debug, Reflect)]
+#[derive(Component, Clone, Debug, Reflect, Resource, Serialize, Deserialize)]
 #[reflect(Component)]
 pub struct CharacterLayers {
     /// Ordered list of sprite layers (bottom to top)
@@ -118,7 +126,7 @@ impl Default for CharacterLayers {
     }
 }
 
-#[derive(Clone, Copy, Debug, Reflect)]
+#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize)]
 pub enum LayerVariant {
     HairColour(u8),
     ClothingColour(u8),
@@ -136,7 +144,7 @@ impl LayerVariant {
 }
 
 /// Represents a single sprite layer in the character
-#[derive(Component, Clone, Debug, Reflect)]
+#[derive(Component, Clone, Debug, Reflect, Serialize, Deserialize)]
 #[reflect(Component)]
 pub struct CharacterLayer {
     /// Type of layer
@@ -171,7 +179,9 @@ impl CharacterLayer {
 }
 
 /// The type of layer. Variants are in bottom-to-top order
-#[derive(Clone, Copy, Debug, Display, Reflect, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(
+    Clone, Copy, Debug, Display, Reflect, PartialEq, Eq, Ord, PartialOrd, Serialize, Deserialize,
+)]
 pub enum LayerType {
     Cape,
     Body,
@@ -411,10 +421,46 @@ impl CharacterAnimation {
 #[derive(Component)]
 pub struct Character;
 
+/// Create a character layer sprite
+fn create_layer_sprite(
+    layer: &CharacterLayer,
+    asset_server: &AssetServer,
+    atlas_index: usize,
+    flip_x: bool,
+) -> impl Bundle {
+    let texture = asset_server.load(layer.texture_path().unwrap());
+    let layout = TextureAtlasLayout::from_grid(
+        UVec2::new(80, 64),
+        COLUMNS,
+        ROWS,
+        None,
+        Some(UVec2::new(0, 1)),
+    );
+
+    (
+        Name::new(format!("{:?} Layer", layer.layer_type)),
+        Sprite {
+            image: texture,
+            texture_atlas: Some(TextureAtlas {
+                layout: asset_server.add(layout),
+                index: atlas_index,
+            }),
+            flip_x,
+            ..default()
+        },
+        Anchor::CENTER,
+        layer.clone(),
+        Transform::default(),
+    )
+}
+
 /// Spawns a layered character with all its sprite layers as children
-pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn spawn_character(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    character_layers: Res<CharacterLayers>,
+) {
     let animation = CharacterAnimation::new(AnimationState::Idle);
-    let character_layers = CharacterLayers::default();
     let position = Vec3::new(TILE_SIZE * 5.0, TILE_SIZE * 3.0, 0.);
 
     // Create the root character entity
@@ -422,7 +468,6 @@ pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn((
             Name::new("Character"),
             Character,
-            character_layers.clone(),
             animation,
             Direction::default(),
             Velocity::default(),
@@ -435,32 +480,8 @@ pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // Spawn each layer as a child sprite
     for layer in character_layers.layers.iter() {
-        let texture = asset_server.load(layer.texture_path().unwrap());
-
-        let layout = TextureAtlasLayout::from_grid(
-            UVec2::new(80, 64),
-            COLUMNS,
-            ROWS,
-            None,
-            Some(UVec2::new(0, 1)),
-        );
-
         let layer_entity = commands
-            .spawn((
-                Name::new(format!("{:?} Layer", layer.layer_type)),
-                Sprite {
-                    image: texture,
-                    texture_atlas: Some(TextureAtlas {
-                        layout: asset_server.add(layout),
-                        index: 0,
-                    }),
-                    flip_x: true,
-                    ..default()
-                },
-                Anchor::CENTER,
-                layer.clone(),
-                Transform::default(),
-            ))
+            .spawn(create_layer_sprite(layer, &asset_server.clone(), 0, true))
             .id();
 
         commands.entity(character_id).add_child(layer_entity);
@@ -500,6 +521,45 @@ pub fn sync_layer_animations(
                 }
                 sprite.flip_x = should_flip;
             }
+        }
+    }
+}
+
+/// System that updates the character entity when the CharacterLayers resource changes
+pub fn update_character(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    character_layers: Res<CharacterLayers>,
+    character_query: Query<(Entity, &Children, &CharacterAnimation, &Direction), With<Character>>,
+    layer_query: Query<Entity, With<CharacterLayer>>,
+) {
+    if !character_layers.is_changed() {
+        return;
+    }
+
+    for (character_entity, children, animation, direction) in &character_query {
+        // Remove all existing layer children
+        for child in children.iter() {
+            if layer_query.contains(child) {
+                commands.entity(child).despawn();
+            }
+        }
+
+        let (row, _, _) = animation.state().get_animation_config();
+        let atlas_index = row * (COLUMNS as usize) + animation.current_frame();
+        let should_flip = *direction == Direction::Right;
+
+        for layer in character_layers.layers.iter() {
+            let layer_entity = commands
+                .spawn(create_layer_sprite(
+                    layer,
+                    &asset_server.clone(),
+                    atlas_index,
+                    should_flip,
+                ))
+                .id();
+
+            commands.entity(character_entity).add_child(layer_entity);
         }
     }
 }

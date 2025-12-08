@@ -42,9 +42,9 @@ fn quit_to_title(_: On<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen
 }
 
 fn go_back(action_query: Query<&ActionState<Action>>, mut next_menu: ResMut<NextState<Menu>>) {
-    if let Ok(action_state) = action_query.single() {
-        if action_state.just_pressed(&Action::Menu) {
-            next_menu.set(Menu::None);
-        }
+    if let Ok(action_state) = action_query.single()
+        && action_state.just_pressed(&Action::Menu)
+    {
+        next_menu.set(Menu::None);
     }
 }

@@ -85,7 +85,14 @@ struct ItemButton {
     layer_type: LayerType,
 }
 
-fn spawn_character_select_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn spawn_character_select_menu(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    character_layers: Res<CharacterLayers>,
+    mut state: ResMut<CharacterSelectState>,
+) {
+    state.current_layers = character_layers.clone();
+
     commands.spawn((
         widget::ui_root("Character Select Menu"),
         GlobalZIndex(2),
@@ -504,21 +511,22 @@ fn go_back_on_click(_: On<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>
 }
 
 fn go_back(action_query: Query<&ActionState<Action>>, mut next_menu: ResMut<NextState<Menu>>) {
-    if let Ok(action_state) = action_query.single() {
-        if action_state.just_pressed(&Action::Menu) {
-            next_menu.set(Menu::Pause);
-        }
+    if let Ok(action_state) = action_query.single()
+        && action_state.just_pressed(&Action::Menu)
+    {
+        next_menu.set(Menu::Pause);
     }
 }
 
 fn confirm_selection(
     _: On<Pointer<Click>>,
     state: Res<CharacterSelectState>,
+    mut character_layers: ResMut<CharacterLayers>,
     mut next_screen: ResMut<NextState<Screen>>,
     mut next_menu: ResMut<NextState<Menu>>,
 ) {
-    // TODO: Save the character configuration somewhere
-    // For now, just proceed to gameplay
+    // Save the character configuration to the resource
+    *character_layers = state.current_layers.clone();
     info!("Character confirmed: {:?}", state.current_layers);
     next_menu.set(Menu::None);
     next_screen.set(Screen::Gameplay);

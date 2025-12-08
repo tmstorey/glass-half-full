@@ -102,7 +102,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
 dependencies = [
  "cfg-if",
- "getrandom",
+ "getrandom 0.3.4",
  "once_cell",
  "version_check",
  "zerocopy",
@@ -1080,6 +1080,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_pkv"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "356a9c6fdc13faf7897103b43a8b84aafe24e1bbf1599df1fb00dc4e9b7055db"
+dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "cfg_aliases",
+ "directories",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "bevy_platform"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1088,7 +1107,7 @@ dependencies = [
  "critical-section",
  "foldhash 0.2.0",
  "futures-channel",
- "getrandom",
+ "getrandom 0.3.4",
  "hashbrown 0.16.0",
  "js-sys",
  "portable-atomic",
@@ -2131,7 +2150,7 @@ version = "0.2.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "919bd05924682a5480aec713596b9e2aabed3a0a6022fab6847f85a99e5f190a"
 dependencies = [
- "getrandom",
+ "getrandom 0.3.4",
  "hybrid-array",
 ]
 
@@ -2195,6 +2214,27 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer 0.10.4",
  "crypto-common 0.1.7",
+]
+
+[[package]]
+name = "directories"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16f5094c54661b38d03bd7e50df373292118db60b585c08a411c6d840017fe7d"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e01a3366d27ee9890022452ee61b2b63a67e6f13f58900b651ff5665f0bb1fab"
+dependencies = [
+ "libc",
+ "option-ext",
+ "redox_users",
+ "windows-sys 0.61.1",
 ]
 
 [[package]]
@@ -2570,6 +2610,17 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "335ff9f135e4384c8150d6f27c6daed433577f86b4750418338c01a1a2528592"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "wasi",
+]
+
+[[package]]
+name = "getrandom"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd"
@@ -2644,10 +2695,11 @@ name = "glass-half-full"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_pkv",
  "chacha20poly1305",
  "derive_more",
  "flexbuffers",
- "getrandom",
+ "getrandom 0.3.4",
  "leafwing-input-manager",
  "rand",
  "serde",
@@ -3007,7 +3059,7 @@ version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9afb3de4395d6b3e67a780b6de64b51c978ecf11cb9a462c66be7d4ca9039d33"
 dependencies = [
- "getrandom",
+ "getrandom 0.3.4",
  "libc",
 ]
 
@@ -3808,6 +3860,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
+name = "option-ext"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
+
+[[package]]
 name = "orbclient"
 version = "0.3.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4106,7 +4164,7 @@ version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
- "getrandom",
+ "getrandom 0.3.4",
 ]
 
 [[package]]
@@ -4154,6 +4212,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0d463f2884048e7153449a55166f91028d5b0ea53c79377099ce4e8cf0cf9bb"
 
 [[package]]
+name = "redb"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae323eb086579a3769daa2c753bb96deb95993c534711e0dbe881b5192906a06"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4169,6 +4236,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5407465600fb0548f1442edf71dd20683c6ed326200ace4b1ef0763521bb3b77"
 dependencies = [
  "bitflags 2.9.4",
+]
+
+[[package]]
+name = "redox_users"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4e608c6638b9c18977b00b475ac1f28d14e84b27d8d42f70e0bf1e3dec127ac"
+dependencies = [
+ "getrandom 0.2.16",
+ "libredox",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -4205,6 +4283,28 @@ name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
+
+[[package]]
+name = "rmp"
+version = "0.8.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "228ed7c16fa39782c3b3468e974aec2795e9089153cd08ee2e9aefb3613334c4"
+dependencies = [
+ "byteorder",
+ "num-traits",
+ "paste",
+]
+
+[[package]]
+name = "rmp-serde"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52e599a477cf9840e92f2cde9a7189e67b42c57532749bf90aea6ec10facd4db"
+dependencies = [
+ "byteorder",
+ "rmp",
+ "serde",
+]
 
 [[package]]
 name = "rodio"
@@ -5025,7 +5125,7 @@ version = "1.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f87b8aa10b915a06587d0dec516c282ff295b475d94abf425d62b57710070a2"
 dependencies = [
- "getrandom",
+ "getrandom 0.3.4",
  "js-sys",
  "serde",
  "wasm-bindgen",
