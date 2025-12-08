@@ -4,7 +4,9 @@ use strum::Display;
 
 pub mod character;
 pub mod controls;
+pub mod level;
 mod parallax;
+mod physics;
 mod tiles;
 use parallax::{parallax_background, scroll_parallax};
 
@@ -34,6 +36,7 @@ pub fn plugin(app: &mut App) {
     app.add_plugins(tiles::plugin);
     app.add_plugins(character::plugin);
     app.add_plugins(controls::plugin);
+    app.add_plugins(physics::plugin);
 }
 
 pub fn spawn_level(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -44,4 +47,7 @@ pub fn spawn_level(mut commands: Commands, asset_server: Res<AssetServer>) {
         DespawnOnExit(Screen::Gameplay),
         children![parallax_background(Season::Summer, asset_server)],
     ));
+
+    // Spawn the flat level
+    level::spawn_flat_level(&mut commands, 40, 0, 6);
 }

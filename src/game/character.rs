@@ -1,8 +1,12 @@
 use crate::{PausableSystems, screens::Screen};
 use bevy::prelude::*;
+use bevy::sprite::Anchor;
 use std::sync::LazyLock;
 use std::time::Duration;
 use strum::Display;
+
+use super::physics::{CharacterController, Velocity};
+use super::tiles::TILE_SIZE;
 
 /// Component for character facing direction
 #[derive(Component, Debug, Default, Reflect, Clone, Copy, PartialEq)]
@@ -411,7 +415,7 @@ pub struct Character;
 pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
     let animation = CharacterAnimation::new(AnimationState::Idle);
     let character_layers = CharacterLayers::default();
-    let position = Vec3::new(5., 5., 0.);
+    let position = Vec3::new(TILE_SIZE * 5.0, TILE_SIZE * 3.0, 0.);
 
     // Create the root character entity
     let character_id = commands
@@ -421,6 +425,8 @@ pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
             character_layers.clone(),
             animation,
             Direction::default(),
+            Velocity::default(),
+            CharacterController::default(),
             Transform::from_translation(position),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
@@ -431,7 +437,13 @@ pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
     for layer in character_layers.layers.iter() {
         let texture = asset_server.load(layer.texture_path().unwrap());
 
-        let layout = TextureAtlasLayout::from_grid(UVec2::new(80, 64), COLUMNS, ROWS, None, None);
+        let layout = TextureAtlasLayout::from_grid(
+            UVec2::new(80, 64),
+            COLUMNS,
+            ROWS,
+            None,
+            Some(UVec2::new(0, 1)),
+        );
 
         let layer_entity = commands
             .spawn((
@@ -445,6 +457,7 @@ pub fn spawn_character(mut commands: Commands, asset_server: Res<AssetServer>) {
                     flip_x: true,
                     ..default()
                 },
+                Anchor::CENTER,
                 layer.clone(),
                 Transform::default(),
             ))
@@ -489,22 +502,4 @@ pub fn sync_layer_animations(
             }
         }
     }
-}
-
-#[expect(dead_code)]
-/// Example system to change animation based on velocity (you'd integrate this with your movement)
-pub fn update_character_animation_from_movement(
-    mut _query: Query<(&Transform, &mut CharacterAnimation), With<Character>>,
-) {
-    // This is a stub - integrate with your actual movement system
-    // Example:
-    // for (transform, mut animation) in &mut query {
-    //     if velocity.length() > RUN_THRESHOLD {
-    //         animation.set_state(AnimationState::Run);
-    //     } else if velocity.length() > WALK_THRESHOLD {
-    //         animation.set_state(AnimationState::Walk);
-    //     } else {
-    //         animation.set_state(AnimationState::Idle);
-    //     }
-    // }
 }
