@@ -137,11 +137,6 @@ pub fn encrypt_raw_assets(_: On<Pointer<Click>>) {
     }
 }
 
-#[cfg(not(feature = "dev_native"))]
-pub fn encrypt_raw_assets(_: On<Pointer<Click>>) {
-    ()
-}
-
 #[cfg(feature = "dev_native")]
 mod asset_encryption {
     use super::*;
