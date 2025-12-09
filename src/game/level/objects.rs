@@ -158,14 +158,12 @@ pub fn update_fire_animation(time: Res<Time>, mut query: Query<&mut FireAnimatio
 }
 
 /// System to sync fire sprite with animation state
-pub fn sync_fire_animation(
-    mut query: Query<(&FireAnimation, &mut Sprite), With<Fire>>,
-) {
+pub fn sync_fire_animation(mut query: Query<(&FireAnimation, &mut Sprite), With<Fire>>) {
     for (animation, mut sprite) in &mut query {
-        if animation.just_changed() {
-            if let Some(atlas) = sprite.texture_atlas.as_mut() {
-                atlas.index = animation.current_frame();
-            }
+        if animation.just_changed()
+            && let Some(atlas) = sprite.texture_atlas.as_mut()
+        {
+            atlas.index = animation.current_frame();
         }
     }
 }
@@ -183,20 +181,10 @@ pub fn update_fire_state(
         };
 
         let layout = match fire.state {
-            FireState::Active => TextureAtlasLayout::from_grid(
-                UVec2::splat(32),
-                5,
-                8,
-                None,
-                None,
-            ),
-            FireState::Extinguished => TextureAtlasLayout::from_grid(
-                UVec2::splat(32),
-                1,
-                1,
-                None,
-                None,
-            ),
+            FireState::Active => TextureAtlasLayout::from_grid(UVec2::splat(32), 5, 8, None, None),
+            FireState::Extinguished => {
+                TextureAtlasLayout::from_grid(UVec2::splat(32), 1, 1, None, None)
+            }
         };
 
         sprite.image = texture;
@@ -220,23 +208,21 @@ pub fn update_fire_state(
 pub struct Snow;
 
 /// Spawns a snow sprite at the specified position
-pub fn spawn_snow(
-    commands: &mut Commands,
-    asset_server: &AssetServer,
-    position: Vec3,
-) -> Entity {
-    commands.spawn((
-        Name::new("Snow"),
-        Snow,
-        Sprite {
-            image: asset_server.load("images/objects/snow.epng"),
-            custom_size: Some(Vec2::new(64.0, 32.0)),
-            ..default()
-        },
-        Transform::from_translation(position),
-        Visibility::default(),
-        DespawnOnExit(Screen::Gameplay),
-    )).id()
+pub fn spawn_snow(commands: &mut Commands, asset_server: &AssetServer, position: Vec3) -> Entity {
+    commands
+        .spawn((
+            Name::new("Snow"),
+            Snow,
+            Sprite {
+                image: asset_server.load("images/objects/snow.epng"),
+                custom_size: Some(Vec2::new(64.0, 32.0)),
+                ..default()
+            },
+            Transform::from_translation(position),
+            Visibility::default(),
+            DespawnOnExit(Screen::Gameplay),
+        ))
+        .id()
 }
 
 /// Marker component for platform objects
@@ -250,18 +236,20 @@ pub fn spawn_platform(
     asset_server: &AssetServer,
     position: Vec3,
 ) -> Entity {
-    commands.spawn((
-        Name::new("Platform"),
-        Platform,
-        Sprite {
-            image: asset_server.load("images/objects/platform.epng"),
-            custom_size: Some(Vec2::new(32.0, 32.0)),
-            ..default()
-        },
-        Transform::from_translation(position),
-        Visibility::default(),
-        DespawnOnExit(Screen::Gameplay),
-    )).id()
+    commands
+        .spawn((
+            Name::new("Platform"),
+            Platform,
+            Sprite {
+                image: asset_server.load("images/objects/platform.epng"),
+                custom_size: Some(Vec2::new(32.0, 32.0)),
+                ..default()
+            },
+            Transform::from_translation(position),
+            Visibility::default(),
+            DespawnOnExit(Screen::Gameplay),
+        ))
+        .id()
 }
 
 /// Component representing a water object
@@ -353,25 +341,27 @@ pub fn spawn_water(
         20, // columns
         7,  // rows
         None,
-        None,
+        Some(UVec2::splat(1)),
     );
 
-    commands.spawn((
-        Name::new(format!("Water {:?}", water_type)),
-        Water::new(water_type),
-        WaterAnimation::new(water_type),
-        Sprite {
-            image: texture,
-            texture_atlas: Some(TextureAtlas {
-                layout: asset_server.add(layout),
-                index: water_type.row_index() * 20, // Start at first frame of the row
-            }),
-            ..default()
-        },
-        Transform::from_translation(position),
-        Visibility::default(),
-        DespawnOnExit(Screen::Gameplay),
-    )).id()
+    commands
+        .spawn((
+            Name::new(format!("Water {:?}", water_type)),
+            Water::new(water_type),
+            WaterAnimation::new(water_type),
+            Sprite {
+                image: texture,
+                texture_atlas: Some(TextureAtlas {
+                    layout: asset_server.add(layout),
+                    index: water_type.row_index() * 20, // Start at first frame of the row
+                }),
+                ..default()
+            },
+            Transform::from_translation(position),
+            Visibility::default(),
+            DespawnOnExit(Screen::Gameplay),
+        ))
+        .id()
 }
 
 /// System to update water animations
@@ -382,14 +372,12 @@ pub fn update_water_animation(time: Res<Time>, mut query: Query<&mut WaterAnimat
 }
 
 /// System to sync water sprite with animation state
-pub fn sync_water_animation(
-    mut query: Query<(&WaterAnimation, &mut Sprite), With<Water>>,
-) {
+pub fn sync_water_animation(mut query: Query<(&WaterAnimation, &mut Sprite), With<Water>>) {
     for (animation, mut sprite) in &mut query {
-        if animation.just_changed() {
-            if let Some(atlas) = sprite.texture_atlas.as_mut() {
-                atlas.index = animation.current_atlas_index();
-            }
+        if animation.just_changed()
+            && let Some(atlas) = sprite.texture_atlas.as_mut()
+        {
+            atlas.index = animation.current_atlas_index();
         }
     }
 }
@@ -466,21 +454,23 @@ pub fn spawn_container(
         None,
     );
 
-    commands.spawn((
-        Name::new(format!("Container {:?}", state)),
-        Container::new(state),
-        Sprite {
-            image: texture,
-            texture_atlas: Some(TextureAtlas {
-                layout: asset_server.add(layout),
-                index: state.column_index(),
-            }),
-            ..default()
-        },
-        Transform::from_translation(position),
-        Visibility::default(),
-        DespawnOnExit(Screen::Gameplay),
-    )).id()
+    commands
+        .spawn((
+            Name::new(format!("Container {:?}", state)),
+            Container::new(state),
+            Sprite {
+                image: texture,
+                texture_atlas: Some(TextureAtlas {
+                    layout: asset_server.add(layout),
+                    index: state.column_index(),
+                }),
+                ..default()
+            },
+            Transform::from_translation(position),
+            Visibility::default(),
+            DespawnOnExit(Screen::Gameplay),
+        ))
+        .id()
 }
 
 /// System to update container sprite when state changes
@@ -489,13 +479,7 @@ pub fn update_container_state(
     mut query: Query<(&Container, &mut Sprite), Changed<Container>>,
 ) {
     for (container, mut sprite) in &mut query {
-        let layout = TextureAtlasLayout::from_grid(
-            UVec2::new(32, 64),
-            3,
-            1,
-            None,
-            None,
-        );
+        let layout = TextureAtlasLayout::from_grid(UVec2::new(32, 32), 3, 1, None, None);
 
         sprite.image = asset_server.load("images/objects/container.epng");
         sprite.texture_atlas = Some(TextureAtlas {

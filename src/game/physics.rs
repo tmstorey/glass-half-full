@@ -5,6 +5,7 @@ use super::character::{
     AnimationState, Character, CharacterAnimation, Direction, OneShotAnimation,
 };
 use super::controls::Action;
+use super::level::PlayerSpawnPoint;
 use super::tiles::{GridPosition, TILE_SIZE, TerrainTile};
 use crate::PausableSystems;
 use crate::pixel_camera::PixelCamera;
@@ -309,7 +310,10 @@ fn camera_follow_player(
 }
 
 /// System to respawn the character if they fall off the level
-fn respawn_on_fall(mut character_query: Query<(&mut Transform, &mut Velocity), With<Character>>) {
+fn respawn_on_fall(
+    spawn_point: Res<PlayerSpawnPoint>,
+    mut character_query: Query<(&mut Transform, &mut Velocity), With<Character>>,
+) {
     let Ok((mut transform, mut velocity)) = character_query.single_mut() else {
         return;
     };
@@ -317,9 +321,8 @@ fn respawn_on_fall(mut character_query: Query<(&mut Transform, &mut Velocity), W
     let fall_threshold = -500.0; // Y-position below which character respawns
 
     if transform.translation.y < fall_threshold {
-        // Reset to starting position
-        transform.translation.x = TILE_SIZE * 5.0;
-        transform.translation.y = TILE_SIZE * 2.0;
+        // Reset to spawn position
+        transform.translation = spawn_point.position;
 
         // Reset velocity to prevent continued falling
         velocity.x = 0.0;

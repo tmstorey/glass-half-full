@@ -7,8 +7,8 @@ use std::sync::LazyLock;
 use std::time::Duration;
 use strum::Display;
 
+use super::level::PlayerSpawnPoint;
 use super::physics::{CharacterController, Velocity};
-use super::tiles::TILE_SIZE;
 
 /// Component for character facing direction
 #[derive(Component, Debug, Default, Reflect, Clone, Copy, PartialEq)]
@@ -504,9 +504,10 @@ pub fn spawn_character(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     character_layers: Res<CharacterLayers>,
+    spawn_point: Res<PlayerSpawnPoint>,
 ) {
     let animation = CharacterAnimation::new(AnimationState::Idle);
-    let position = Vec3::new(TILE_SIZE * 5.0, TILE_SIZE * 2.0, 0.);
+    let position = spawn_point.position;
 
     // Create the root character entity
     let character_id = commands

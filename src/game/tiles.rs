@@ -13,11 +13,7 @@ pub fn plugin(app: &mut App) {
     app.load_resource::<TilesetAtlases>();
     app.add_systems(
         Update,
-        (
-            update_dual_tiles,
-            sync_grid_to_transform,
-            spawn_terrain_on_click,
-        )
+        (update_dual_tiles, sync_grid_to_transform)
             .in_set(PausableSystems)
             .run_if(in_state(Screen::Gameplay)),
     );
@@ -396,61 +392,6 @@ pub fn update_dual_tiles(
                 Transform::from_translation(world_pos.extend(0.0)),
                 DespawnOnExit(Screen::Gameplay),
             ));
-        }
-    }
-}
-
-/// Spawn or remove terrain tiles on mouse click
-pub fn spawn_terrain_on_click(
-    mut commands: Commands,
-    mouse_buttons: Res<ButtonInput<MouseButton>>,
-    camera_query: Query<(&Camera, &GlobalTransform), With<crate::pixel_camera::MainCamera>>,
-    window_query: Query<&Window>,
-    terrain_query: Query<(Entity, &GridPosition), With<TerrainTile>>,
-) {
-    if !mouse_buttons.just_pressed(MouseButton::Left)
-        && !mouse_buttons.just_pressed(MouseButton::Right)
-    {
-        return;
-    }
-
-    let Ok(window) = window_query.single() else {
-        return;
-    };
-    let Some(cursor_position) = window.cursor_position() else {
-        return;
-    };
-
-    let Ok((camera, camera_transform)) = camera_query.single() else {
-        return;
-    };
-
-    let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
-        return;
-    };
-
-    let grid_x = (world_pos.x / TILE_SIZE).floor() as i32;
-    let grid_y = (world_pos.y / TILE_SIZE).floor() as i32;
-    let grid_pos = GridPosition::primary(grid_x, grid_y);
-
-    // Left click: spawn grass, Right click: remove
-    if mouse_buttons.just_pressed(MouseButton::Left) {
-        // Check if there's already a terrain tile at this position
-        let tile_exists = terrain_query.iter().any(|(_, pos)| *pos == grid_pos);
-
-        if !tile_exists {
-            commands.spawn((
-                Name::new(format!("TerrainTile Grass at ({}, {})", grid_x, grid_y)),
-                grid_pos,
-                TerrainTile::Grass,
-            ));
-        }
-    } else if mouse_buttons.just_pressed(MouseButton::Right) {
-        // Remove terrain tile at this position
-        for (entity, pos) in terrain_query.iter() {
-            if *pos == grid_pos {
-                commands.entity(entity).despawn();
-            }
         }
     }
 }
