@@ -2,6 +2,7 @@ use bevy::image::{ImageLoaderSettings, ImageSampler};
 use bevy::prelude::*;
 
 use super::Season;
+use crate::pixel_camera::PixelCamera;
 
 #[derive(Component, Debug, Default, PartialEq, PartialOrd, Reflect)]
 #[reflect(Component)]
@@ -53,12 +54,17 @@ pub fn parallax_background(season: Season, asset_server: Res<AssetServer>) -> im
     )
 }
 
-pub fn scroll_parallax(time: Res<Time>, mut query: Query<(&ParallaxLayer, &mut Transform)>) {
-    let base_speed = 5.0;
+pub fn scroll_parallax(
+    camera_query: Query<&Transform, With<PixelCamera>>,
+    mut parallax_query: Query<(&ParallaxLayer, &mut Transform), Without<PixelCamera>>,
+) {
+    let Ok(camera_transform) = camera_query.single() else {
+        return;
+    };
 
-    for (layer, mut transform) in &mut query {
-        let speed = base_speed * (1. - layer.scroll_factor);
-        transform.translation.x -= speed * time.delta_secs();
+    for (layer, mut transform) in &mut parallax_query {
+        transform.translation.x = camera_transform.translation.x * layer.scroll_factor;
         transform.translation.x %= 1024.;
+        transform.translation.y = camera_transform.translation.y * layer.scroll_factor;
     }
 }

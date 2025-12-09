@@ -6,6 +6,7 @@ pub enum Action {
     #[actionlike(DualAxis)]
     Run,
     Jump,
+    Use,
     Menu,
     Select,
 }
@@ -24,6 +25,9 @@ fn setup_input(mut commands: Commands) {
 
     input_map.insert(Action::Jump, KeyCode::Space);
     input_map.insert(Action::Jump, GamepadButton::South);
+
+    input_map.insert(Action::Use, KeyCode::KeyE);
+    input_map.insert(Action::Use, GamepadButton::West);
 
     input_map.insert(Action::Menu, KeyCode::Escape);
     input_map.insert(Action::Menu, GamepadButton::Start);

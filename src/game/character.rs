@@ -32,6 +32,7 @@ pub fn plugin(app: &mut App) {
     app.register_type::<CharacterAnimation>();
     app.register_type::<AnimationState>();
     app.register_type::<Direction>();
+    app.register_type::<OneShotAnimation>();
 
     app.init_persistent_resource::<CharacterLayers>();
 
@@ -352,21 +353,21 @@ pub enum AnimationState {
     Run,
     Jump,
     Fall,
-    Attack,
+    Use,
     Death,
 }
 
 impl AnimationState {
-    /// Returns (row_index, frame_count, frame_duration)
-    pub fn get_animation_config(&self) -> (usize, usize, Duration) {
+    /// Returns (row_index, frame_count, starting_frame, frame_duration)
+    pub fn get_animation_config(&self) -> (usize, usize, usize, Duration) {
         match self {
-            AnimationState::Idle => (0, 5, Duration::from_millis(200)),
-            AnimationState::Walk => (1, 8, Duration::from_millis(100)),
-            AnimationState::Run => (2, 8, Duration::from_millis(80)),
-            AnimationState::Jump => (3, 4, Duration::from_millis(100)),
-            AnimationState::Fall => (4, 4, Duration::from_millis(100)),
-            AnimationState::Attack => (5, 6, Duration::from_millis(60)),
-            AnimationState::Death => (6, 10, Duration::from_millis(100)),
+            AnimationState::Idle => (0, 5, 0, Duration::from_millis(200)),
+            AnimationState::Walk => (1, 8, 0, Duration::from_millis(100)),
+            AnimationState::Run => (2, 8, 0, Duration::from_millis(80)),
+            AnimationState::Jump => (3, 4, 0, Duration::from_millis(100)),
+            AnimationState::Fall => (4, 4, 0, Duration::from_millis(100)),
+            AnimationState::Use => (5, 2, 4, Duration::from_millis(200)),
+            AnimationState::Death => (6, 10, 0, Duration::from_millis(100)),
         }
     }
 }
@@ -374,10 +375,10 @@ impl AnimationState {
 #[allow(dead_code)]
 impl CharacterAnimation {
     pub fn new(state: AnimationState) -> Self {
-        let (_, _, duration) = state.get_animation_config();
+        let (_, _, starting_frame, duration) = state.get_animation_config();
         Self {
             timer: Timer::new(duration, TimerMode::Repeating),
-            current_frame: 0,
+            current_frame: starting_frame,
             state,
         }
     }
@@ -385,22 +386,22 @@ impl CharacterAnimation {
     pub fn update(&mut self, delta: Duration) {
         self.timer.tick(delta);
         if self.timer.just_finished() {
-            let (_, frame_count, _) = self.state.get_animation_config();
-            self.current_frame = (self.current_frame + 1) % frame_count;
+            let (_, frame_count, starting_frame, _) = self.state.get_animation_config();
+            self.current_frame = (self.current_frame + 1 - starting_frame) % frame_count + starting_frame;
         }
     }
 
     pub fn set_state(&mut self, new_state: AnimationState) {
         if self.state != new_state {
-            let (_, _, duration) = new_state.get_animation_config();
+            let (_, _, starting_frame, duration) = new_state.get_animation_config();
             self.state = new_state;
-            self.current_frame = 0;
+            self.current_frame = starting_frame;
             self.timer = Timer::new(duration, TimerMode::Repeating);
         }
     }
 
     pub fn get_atlas_index(&self) -> usize {
-        let (row, _, _) = self.state.get_animation_config();
+        let (row, _, _, _) = self.state.get_animation_config();
         row * 100 + self.current_frame // Assuming max 100 frames per row
     }
 
@@ -420,6 +421,49 @@ impl CharacterAnimation {
 /// Marker component for the root character entity
 #[derive(Component)]
 pub struct Character;
+
+/// Component to track one-shot animations that should play to completion
+#[derive(Component, Debug, Default, Reflect)]
+#[reflect(Component)]
+pub struct OneShotAnimation {
+    pub frames_remaining: Option<usize>,
+}
+
+/// Marker component for the bucket entity
+#[derive(Component)]
+pub struct Bucket;
+
+/// Create a character layer sprite
+fn create_bucket_sprite(
+    asset_server: &AssetServer,
+    atlas_index: usize,
+    flip_x: bool,
+) -> impl Bundle {
+    let texture = asset_server.load("images/character/bucket.epng");
+    let layout = TextureAtlasLayout::from_grid(
+        UVec2::new(80, 64),
+        COLUMNS,
+        ROWS,
+        None,
+        Some(UVec2::new(0, 1)),
+    );
+
+    (
+        Name::new("Bucket Layer"),
+        Sprite {
+            image: texture,
+            texture_atlas: Some(TextureAtlas {
+                layout: asset_server.add(layout),
+                index: atlas_index,
+            }),
+            flip_x,
+            ..default()
+        },
+        Bucket,
+        Anchor::CENTER,
+        Transform::from_translation(Vec3::new(0., 0., 10.)),
+    )
+}
 
 /// Create a character layer sprite
 fn create_layer_sprite(
@@ -461,7 +505,7 @@ pub fn spawn_character(
     character_layers: Res<CharacterLayers>,
 ) {
     let animation = CharacterAnimation::new(AnimationState::Idle);
-    let position = Vec3::new(TILE_SIZE * 5.0, TILE_SIZE * 3.0, 0.);
+    let position = Vec3::new(TILE_SIZE * 5.0, TILE_SIZE * 2.0, 0.);
 
     // Create the root character entity
     let character_id = commands
@@ -472,6 +516,7 @@ pub fn spawn_character(
             Direction::default(),
             Velocity::default(),
             CharacterController::default(),
+            OneShotAnimation::default(),
             Transform::from_translation(position),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
@@ -486,6 +531,11 @@ pub fn spawn_character(
 
         commands.entity(character_id).add_child(layer_entity);
     }
+
+    let bucket_entity = commands
+        .spawn(create_bucket_sprite(&asset_server.clone(), 0, true))
+        .id();
+    commands.entity(character_id).add_child(bucket_entity);
 }
 
 /// System that updates animation timers
@@ -501,14 +551,14 @@ pub fn update_character_animation_timer(
 /// System that syncs all layer sprites to the character's current animation frame and direction
 pub fn sync_layer_animations(
     character_query: Query<(&CharacterAnimation, &Direction, &Children), With<Character>>,
-    mut layer_query: Query<&mut Sprite, With<CharacterLayer>>,
+    mut layer_query: Query<&mut Sprite, Or<(With<CharacterLayer>, With<Bucket>)>>,
 ) {
     for (animation, direction, children) in &character_query {
         if !animation.just_changed() {
             continue;
         }
 
-        let (row, _, _) = animation.state().get_animation_config();
+        let (row, _, _, _) = animation.state().get_animation_config();
         let atlas_index = row * (COLUMNS as usize) + animation.current_frame();
 
         // Sprites face left in the sheet, so flip when facing right
@@ -545,7 +595,7 @@ pub fn update_character(
             }
         }
 
-        let (row, _, _) = animation.state().get_animation_config();
+        let (row, _, _, _) = animation.state().get_animation_config();
         let atlas_index = row * (COLUMNS as usize) + animation.current_frame();
         let should_flip = *direction == Direction::Right;
 

@@ -51,5 +51,5 @@ pub fn spawn_level(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     // Spawn the flat level
-    level::spawn_flat_level(&mut commands, 40, 0, 6);
+    level::spawn_flat_level(&mut commands, 40, -2, 6);
 }
