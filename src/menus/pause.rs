@@ -40,6 +40,7 @@ fn spawn_pause_menu(mut commands: Commands) {
     ));
 }
 
+#[cfg(feature = "dev_native")]
 fn increment_season(
     _: On<Pointer<Click>>,
     mut game_level: ResMut<GameLevel>,
