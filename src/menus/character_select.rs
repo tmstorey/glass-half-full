@@ -545,7 +545,9 @@ fn confirm_selection(
     mut next_menu: ResMut<NextState<Menu>>,
 ) {
     // Save the character configuration to the resource
-    *character_layers = state.current_layers.clone();
+    let mut current_layers = state.current_layers.clone();
+    current_layers.layers.sort_by_key(|layer| layer.layer_type);
+    *character_layers = current_layers;
     info!("Character confirmed: {:?}", state.current_layers);
     next_menu.set(Menu::None);
     next_screen.set(Screen::Gameplay);

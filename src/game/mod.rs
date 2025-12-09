@@ -1,6 +1,7 @@
 use crate::{PausableSystems, screens::Screen};
 use bevy::prelude::*;
 use bevy_pkv::prelude::*;
+use serde::{Deserialize, Serialize};
 use strum::Display;
 
 pub mod character;
@@ -15,7 +16,20 @@ use interactions::LevelCompleteMessage;
 use parallax::{parallax_background, scroll_parallax};
 
 #[derive(
-    Clone, Copy, Debug, Default, Display, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Display,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Reflect,
+    Resource,
+    Serialize,
+    Deserialize,
 )]
 pub enum Season {
     #[default]
@@ -25,13 +39,55 @@ pub enum Season {
     Spring,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Reflect,
+    Resource,
+    Serialize,
+    Deserialize,
+)]
 pub struct PlayerLevel(pub u8);
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Reflect,
+    Resource,
+    Serialize,
+    Deserialize,
+)]
 pub struct GameLevel(pub u8);
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Reflect,
+    Resource,
+    Serialize,
+    Deserialize,
+)]
 pub struct CompletedYear(pub bool);
 
 impl Season {
@@ -48,10 +104,10 @@ impl Season {
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(PkvStore::new("tmstorey", "glass-half-full"));
-    app.init_resource::<PlayerLevel>();
-    app.init_resource::<GameLevel>();
-    app.init_resource::<CompletedYear>();
-    app.init_resource::<Season>();
+    app.init_persistent_resource::<PlayerLevel>();
+    app.init_persistent_resource::<GameLevel>();
+    app.init_persistent_resource::<CompletedYear>();
+    app.init_persistent_resource::<Season>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
     app.add_systems(
         Update,
