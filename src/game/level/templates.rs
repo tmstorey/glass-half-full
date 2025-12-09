@@ -44,6 +44,8 @@ fn is_jump_valid(from: Vec2, to: Vec2) -> bool {
 /// Generates a sequence of platforms with randomized spacing and height,
 /// while ensuring all jumps are within the player's capabilities.
 pub fn create_random_linear_segment(platform_count: usize, _seed: u64) -> PlatformGraph {
+    use super::graph::PlatformType;
+
     let start_id = NodeId(0);
     let goal_id = NodeId(platform_count - 1);
     let mut graph = PlatformGraph::new(start_id, goal_id);
@@ -51,8 +53,17 @@ pub fn create_random_linear_segment(platform_count: usize, _seed: u64) -> Platfo
     let mut platforms = Vec::new();
 
     // Generate platforms (positions will be calculated later by generate_layout)
-    for _ in 0..platform_count {
-        platforms.push(PlatformNode::new());
+    for i in 0..platform_count {
+        if i == 0 {
+            // First platform is Start type
+            platforms.push(PlatformNode::with_type(PlatformType::Start));
+        } else if i == platform_count - 1 {
+            // Last platform is Goal type
+            platforms.push(PlatformNode::with_type(PlatformType::Goal));
+        } else {
+            // Middle platforms are regular
+            platforms.push(PlatformNode::new());
+        }
     }
 
     // Add all platforms to the graph
@@ -78,15 +89,17 @@ pub fn create_random_linear_segment(platform_count: usize, _seed: u64) -> Platfo
 
 /// Creates a simple linear platform layout
 pub fn create_linear_template() -> PlatformGraph {
+    use super::graph::PlatformType;
+
     let mut graph = PlatformGraph::new(NodeId(0), NodeId(4));
 
-    // Create 5 platforms in a line (positions will be calculated later by generate_layout)
+    // Create 5 platforms: Start, 3 regular, Goal
     let platforms = vec![
+        PlatformNode::with_type(PlatformType::Start),
         PlatformNode::new(),
         PlatformNode::new(),
         PlatformNode::new(),
-        PlatformNode::new(),
-        PlatformNode::new(),
+        PlatformNode::with_type(PlatformType::Goal),
     ];
 
     // Add all platforms to the graph

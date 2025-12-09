@@ -27,6 +27,26 @@ pub struct Edge {
     pub connection_type: ConnectionType,
 }
 
+/// Ground level for grounded platforms (in world units)
+pub const GROUND_LEVEL: f32 = -64.0;
+
+/// Height of boundary walls on start/goal platforms (in tiles)
+pub const WALL_HEIGHT: i32 = 5;
+
+/// Type of platform structure
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum PlatformType {
+    /// Floating platform (just the platform tiles)
+    #[default]
+    Floating,
+    /// Grounded platform (dirt extends down to GROUND_LEVEL)
+    Grounded,
+    /// Start platform (grounded with left wall and water source)
+    Start,
+    /// Goal platform (grounded with right wall and goal container)
+    Goal,
+}
+
 /// A node in the platform graph representing a platform section
 #[derive(Debug, Clone)]
 pub struct PlatformNode {
@@ -34,6 +54,8 @@ pub struct PlatformNode {
     pub edges: Vec<Edge>,
     /// Smart terrain objects placed on this platform
     pub terrain_objects: Vec<SmartTerrain>,
+    /// Type of platform structure
+    pub platform_type: PlatformType,
 }
 
 impl PlatformNode {
@@ -41,6 +63,16 @@ impl PlatformNode {
         Self {
             edges: Vec::new(),
             terrain_objects: Vec::new(),
+            platform_type: PlatformType::default(),
+        }
+    }
+
+    /// Creates a new platform node with a specific type
+    pub fn with_type(platform_type: PlatformType) -> Self {
+        Self {
+            edges: Vec::new(),
+            terrain_objects: Vec::new(),
+            platform_type,
         }
     }
 
@@ -55,14 +87,19 @@ impl PlatformNode {
         self.terrain_objects.push(terrain);
     }
 
-    /// Calculates the width this platform should have based on its terrain
+    /// Calculates the width this platform should have based on its terrain or type
     pub fn calculate_width(&self) -> f32 {
         use crate::game::tiles::TILE_SIZE;
+
+        // Start and Goal platforms are always wide enough for water
+        if matches!(self.platform_type, PlatformType::Start | PlatformType::Goal) {
+            return TILE_SIZE * 9.0;
+        }
 
         if self
             .terrain_objects
             .iter()
-            .any(|t| matches!(t, SmartTerrain::WaterSource { .. }))
+            .any(|t| matches!(t, SmartTerrain::WaterSource))
         {
             TILE_SIZE * 9.0 // Water platforms need 9+ tiles
         } else {
@@ -70,12 +107,17 @@ impl PlatformNode {
         }
     }
 
-    /// Calculates the height this platform should have based on its terrain
+    /// Calculates the height this platform should have based on its terrain or type
     pub fn calculate_height(&self) -> u32 {
+        // Start and Goal platforms are always 2 tiles high
+        if matches!(self.platform_type, PlatformType::Start | PlatformType::Goal) {
+            return 2;
+        }
+
         if self
             .terrain_objects
             .iter()
-            .any(|t| matches!(t, SmartTerrain::WaterSource { .. }))
+            .any(|t| matches!(t, SmartTerrain::WaterSource))
         {
             2 // Water platforms are 2 tiles high
         } else {
@@ -96,7 +138,7 @@ pub struct PlatformLayout {
 #[derive(Debug, Clone, PartialEq)]
 pub enum SmartTerrain {
     /// Infinite water source
-    WaterSource { active: bool },
+    WaterSource,
     /// Infinite snow source
     SnowSource,
     /// Fire that can be extinguished

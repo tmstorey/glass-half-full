@@ -144,7 +144,7 @@ impl CausalityGenerator {
         chain.add_node(CausalityNode {
             effect: Effect::WaterBucket,
             cause: Cause::Player,
-            terrain: SmartTerrain::WaterSource { active: true },
+            terrain: SmartTerrain::WaterSource,
             location: node,
         });
 

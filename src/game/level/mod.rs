@@ -23,7 +23,8 @@ pub use causality::{BucketContent, CausalityChain, CausalityNode, Cause, Effect}
 pub use example::generate_example_level;
 pub use generator::{CausalityGenerator, Difficulty, GeneratorConfig};
 pub use graph::{
-    ConnectionType, Edge, NodeId, PlatformGraph, PlatformLayout, PlatformNode, SmartTerrain,
+    ConnectionType, Edge, GROUND_LEVEL, NodeId, PlatformGraph, PlatformLayout, PlatformNode,
+    PlatformType, SmartTerrain, WALL_HEIGHT,
 };
 pub use spawn::{PlayerSpawnPoint, spawn_level_from_graph, update_player_spawn_point};
 pub use templates::{
