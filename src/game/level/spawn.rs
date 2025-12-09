@@ -81,27 +81,23 @@ fn spawn_water_platform(
     use rand::Rng;
     let mut rng = rand::rng();
 
-    let platform_width_tiles = (layout.width / TILE_SIZE) as i32;
+    let platform_width_tiles = layout.width_tiles;
+    let platform_x_tiles = layout.grid_x;
+    let platform_y_tiles = layout.grid_y;
 
-    // Layout position is the CENTER of the platform, so calculate left edge
-    let left_edge_x = layout.position.x - (layout.width / 2.0);
-    let platform_x_tiles = (left_edge_x / TILE_SIZE) as i32;
-    let platform_y_tiles = (layout.position.y / TILE_SIZE) as i32;
-
-    // Generate water layout (random 3-5 tiles wide)
-    let middle_count = rng.random_range(1..=3);
-    let total_water_width = 2 + middle_count;
+    // Generate water layout (random 1-4 tiles wide)
+    let total_water_width = rng.random_range(1..=4);
     let water_start_x = platform_x_tiles + ((platform_width_tiles - total_water_width) / 2);
 
     // Spawn platform tiles (2 tiles high)
-    for y_offset in 0..2 {
+    for y_offset in 0..layout.height_tiles {
         for x_offset in 0..platform_width_tiles {
             let tile_x = platform_x_tiles + x_offset;
-            let tile_y = platform_y_tiles - y_offset;
+            let tile_y = platform_y_tiles + y_offset;
             let grid_pos = GridPosition::primary(tile_x, tile_y);
 
             // Skip top layer where water will be
-            if y_offset == 0 {
+            if y_offset == layout.height_tiles - 1 {
                 if tile_x >= water_start_x && tile_x < water_start_x + total_water_width + 1 {
                     continue;
                 }
@@ -124,7 +120,7 @@ fn spawn_water_platform(
     }
 
     // Spawn water tiles on top layer
-    for x_offset in 0..=total_water_width + 1 {
+    for x_offset in 0..=total_water_width + 2 {
         let z = if x_offset <= 0 || x_offset > total_water_width + 1 {
             -0.1
         } else {
@@ -132,7 +128,7 @@ fn spawn_water_platform(
         };
 
         let tile_x = water_start_x + x_offset;
-        let water_grid_pos = GridPosition::primary(tile_x, platform_y_tiles + 1);
+        let water_grid_pos = GridPosition::primary(tile_x, platform_y_tiles + layout.height_tiles);
 
         spawn_water(
             commands,
@@ -146,7 +142,7 @@ fn spawn_water_platform(
     // If grounded, spawn dirt tiles extending down to GROUND_LEVEL
     if node.platform_type == PlatformType::Grounded {
         let ground_y_tiles = (GROUND_LEVEL / TILE_SIZE) as i32;
-        let platform_bottom_y = platform_y_tiles - (layout.height as i32 - 1);
+        let platform_bottom_y = platform_y_tiles;
 
         // Spawn dirt from bottom of platform down to ground level
         for y in ground_y_tiles..platform_bottom_y {
@@ -169,18 +165,15 @@ fn spawn_water_platform(
 fn spawn_standard_platform(commands: &mut Commands, node: &PlatformNode, layout: &PlatformLayout) {
     use super::graph::{GROUND_LEVEL, PlatformType};
 
-    let platform_width_tiles = (layout.width / TILE_SIZE) as i32;
-
-    // Layout position is the CENTER of the platform, so calculate left edge
-    let left_edge_x = layout.position.x - (layout.width / 2.0);
-    let platform_x_tiles = (left_edge_x / TILE_SIZE) as i32;
-    let platform_y_tiles = (layout.position.y / TILE_SIZE) as i32;
+    let platform_width_tiles = layout.width_tiles;
+    let platform_x_tiles = layout.grid_x;
+    let platform_y_tiles = layout.grid_y;
 
     // Spawn platform tiles based on height
-    for y_offset in 0..layout.height as i32 {
+    for y_offset in 0..layout.height_tiles {
         for x_offset in 0..platform_width_tiles {
             let tile_x = platform_x_tiles + x_offset;
-            let tile_y = platform_y_tiles - y_offset;
+            let tile_y = platform_y_tiles + y_offset;
 
             let grid_pos = GridPosition::primary(tile_x, tile_y);
             commands.spawn((
@@ -195,7 +188,7 @@ fn spawn_standard_platform(commands: &mut Commands, node: &PlatformNode, layout:
     // If grounded, spawn dirt tiles extending down to GROUND_LEVEL
     if node.platform_type == PlatformType::Grounded {
         let ground_y_tiles = (GROUND_LEVEL / TILE_SIZE) as i32;
-        let platform_bottom_y = platform_y_tiles - (layout.height as i32 - 1);
+        let platform_bottom_y = platform_y_tiles;
 
         // Spawn dirt from bottom of platform down to ground level
         for y in ground_y_tiles..platform_bottom_y {
@@ -222,11 +215,8 @@ fn spawn_other_terrain_objects(
     layout: &PlatformLayout,
 ) {
     for terrain in &node.terrain_objects {
-        let world_pos = Vec3::new(
-            layout.position.x + layout.width / 2.0,
-            layout.position.y + TILE_SIZE,
-            0.0,
-        );
+        let center_world = layout.center_world();
+        let world_pos = Vec3::new(center_world.x, layout.top_world() + TILE_SIZE, 0.0);
 
         match terrain {
             SmartTerrain::WaterSource => {
@@ -245,21 +235,14 @@ fn spawn_other_terrain_objects(
                 super::objects::spawn_fire(commands, asset_server, world_pos, fire_state);
             }
             SmartTerrain::GoalContainer { .. } => {
-                let container_pos = Vec3::new(
-                    layout.position.x + layout.width / 2.0,
-                    layout.position.y + TILE_SIZE * 2.0,
-                    0.0,
-                );
+                let container_pos =
+                    Vec3::new(center_world.x, layout.top_world() + TILE_SIZE, 0.0);
                 spawn_container(commands, asset_server, container_pos, ContainerState::Empty);
             }
             SmartTerrain::SwitchContainer { .. } => {
                 // For now, spawn as a regular container
                 // TODO: Differentiate visually or add switch logic
-                let container_pos = Vec3::new(
-                    layout.position.x + layout.width / 2.0,
-                    layout.position.y + TILE_SIZE,
-                    0.0,
-                );
+                let container_pos = Vec3::new(center_world.x, layout.top_world() + TILE_SIZE, 0.0);
                 spawn_container(commands, asset_server, container_pos, ContainerState::Empty);
             }
             SmartTerrain::Switch { .. } => {
@@ -285,10 +268,9 @@ fn spawn_start_platform(
     use rand::Rng;
     let mut rng = rand::rng();
 
-    let platform_width_tiles = (layout.width / TILE_SIZE) as i32;
-    let left_edge_x = layout.position.x - (layout.width / 2.0);
-    let platform_x_tiles = (left_edge_x / TILE_SIZE) as i32;
-    let platform_y_tiles = (layout.position.y / TILE_SIZE) as i32;
+    let platform_width_tiles = layout.width_tiles;
+    let platform_x_tiles = layout.grid_x;
+    let platform_y_tiles = layout.grid_y;
 
     // Generate water layout
     let middle_count = rng.random_range(1..=3);
@@ -296,21 +278,21 @@ fn spawn_start_platform(
     let water_start_x = platform_x_tiles + ((platform_width_tiles - middle_count - 2) / 2);
 
     // Spawn platform tiles (2 tiles high)
-    for y_offset in 0..2 {
+    for y_offset in 0..layout.height_tiles {
         for x_offset in 0..platform_width_tiles {
             let tile_x = platform_x_tiles + x_offset;
-            let tile_y = platform_y_tiles - y_offset;
+            let tile_y = platform_y_tiles + y_offset;
             let grid_pos = GridPosition::primary(tile_x, tile_y);
 
             // Skip top layer where water will be
-            if y_offset == 0
+            if y_offset == layout.height_tiles - 1
                 && tile_x >= water_start_x
                 && tile_x < water_start_x + total_water_width + 1
             {
                 continue;
             }
 
-            let terrain = if y_offset == 0 {
+            let terrain = if y_offset == layout.height_tiles - 1 {
                 TerrainTile::Grass
             } else {
                 TerrainTile::Dirt
@@ -325,14 +307,14 @@ fn spawn_start_platform(
     }
 
     // Spawn water tiles
-    for x_offset in 0..=total_water_width + 1 {
+    for x_offset in 0..=total_water_width + 2 {
         let z = if x_offset <= 0 || x_offset > total_water_width + 1 {
             -0.1
         } else {
             20.
         };
         let tile_x = water_start_x + x_offset;
-        let water_grid_pos = GridPosition::primary(tile_x, platform_y_tiles + 1);
+        let water_grid_pos = GridPosition::primary(tile_x, platform_y_tiles + layout.height_tiles);
         spawn_water(
             commands,
             asset_server,
@@ -344,7 +326,7 @@ fn spawn_start_platform(
 
     // Spawn ground support (dirt to GROUND_LEVEL)
     let ground_y_tiles = (GROUND_LEVEL / TILE_SIZE) as i32;
-    let platform_bottom_y = platform_y_tiles - 1;
+    let platform_bottom_y = platform_y_tiles;
     for y in ground_y_tiles..platform_bottom_y {
         for x_offset in 0..platform_width_tiles {
             let tile_x = platform_x_tiles + x_offset;
@@ -383,19 +365,18 @@ fn spawn_goal_platform(
 ) {
     use super::graph::{GROUND_LEVEL, WALL_HEIGHT};
 
-    let platform_width_tiles = (layout.width / TILE_SIZE) as i32;
-    let left_edge_x = layout.position.x - (layout.width / 2.0);
-    let platform_x_tiles = (left_edge_x / TILE_SIZE) as i32;
-    let platform_y_tiles = (layout.position.y / TILE_SIZE) as i32;
+    let platform_width_tiles = layout.width_tiles;
+    let platform_x_tiles = layout.grid_x;
+    let platform_y_tiles = layout.grid_y;
 
     // Spawn platform tiles (2 tiles high)
-    for y_offset in 0..2 {
+    for y_offset in 0..layout.height_tiles {
         for x_offset in 0..platform_width_tiles {
             let tile_x = platform_x_tiles + x_offset;
-            let tile_y = platform_y_tiles - y_offset;
+            let tile_y = platform_y_tiles + y_offset;
             let grid_pos = GridPosition::primary(tile_x, tile_y);
 
-            let terrain = if y_offset == 0 {
+            let terrain = if y_offset == layout.height_tiles - 1 {
                 TerrainTile::Grass
             } else {
                 TerrainTile::Dirt
@@ -410,12 +391,13 @@ fn spawn_goal_platform(
     }
 
     // Spawn goal container in the middle
-    let container_pos = Vec3::new(layout.position.x, layout.position.y + TILE_SIZE * 2.0, 0.0);
+    let center_world = layout.center_world();
+    let container_pos = Vec3::new(center_world.x, layout.top_world() + TILE_SIZE, 0.0);
     spawn_container(commands, asset_server, container_pos, ContainerState::Empty);
 
     // Spawn ground support (dirt to GROUND_LEVEL)
     let ground_y_tiles = (GROUND_LEVEL / TILE_SIZE) as i32;
-    let platform_bottom_y = platform_y_tiles - 1;
+    let platform_bottom_y = platform_y_tiles;
     for y in ground_y_tiles..platform_bottom_y {
         for x_offset in 0..platform_width_tiles {
             let tile_x = platform_x_tiles + x_offset;
@@ -453,9 +435,10 @@ pub fn update_player_spawn_point(
     spawn_point: &mut PlayerSpawnPoint,
 ) {
     if let Some(start_layout) = layouts.get(&graph.start) {
+        let center_world = start_layout.center_world();
         spawn_point.position = Vec3::new(
-            start_layout.position.x,
-            start_layout.position.y + TILE_SIZE * 4.0,
+            center_world.x,
+            start_layout.top_world() + TILE_SIZE * 4.0,
             0.0,
         );
     }

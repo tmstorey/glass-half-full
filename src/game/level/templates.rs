@@ -285,9 +285,9 @@ mod tests {
             let layouts = graph.generate_layout(12345);
             for layout in layouts.values() {
                 assert!(
-                    layout.position.y >= 0.0,
-                    "Platform below y=0 at y={}",
-                    layout.position.y
+                    layout.grid_y >= 0,
+                    "Platform below y=0 at grid_y={}",
+                    layout.grid_y
                 );
             }
         }

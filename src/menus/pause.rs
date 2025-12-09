@@ -33,6 +33,7 @@ fn spawn_pause_menu(mut commands: Commands) {
             widget::button("Character Select", open_character_select),
             widget::button("Settings", open_settings_menu),
             widget::button("Increment season", increment_season),
+            widget::button("Increment level", increment_level),
             widget::button("Quit to title", quit_to_title),
         ],
     ));
@@ -45,6 +46,14 @@ fn increment_season(
     mut next_screen: ResMut<NextState<Screen>>,
 ) {
     game_level.0 = 10;
+    next_screen.set(Screen::Victory);
+}
+
+#[cfg(feature = "dev_native")]
+fn increment_level(
+    _: On<Pointer<Click>>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
     next_screen.set(Screen::Victory);
 }
 

@@ -63,11 +63,11 @@ pub fn generate_example_level() {
                     for (i, node) in graph.nodes.iter().enumerate() {
                         if !node.terrain_objects.is_empty() {
                             let node_id = super::graph::NodeId(i);
-                            let position = layouts
+                            let grid_pos = layouts
                                 .get(&node_id)
-                                .map(|l| l.position)
-                                .unwrap_or(bevy::math::Vec2::ZERO);
-                            println!("  Platform {} at {:?}:", i, position);
+                                .map(|l| (l.grid_x, l.grid_y))
+                                .unwrap_or((0, 0));
+                            println!("  Platform {} at grid {:?}:", i, grid_pos);
                             for terrain in &node.terrain_objects {
                                 println!("    - {:?}", terrain);
                             }

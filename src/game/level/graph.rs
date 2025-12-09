@@ -126,12 +126,51 @@ impl PlatformNode {
     }
 }
 
-/// Concrete layout information for a platform
+/// Concrete layout information for a platform in grid coordinates
 #[derive(Debug, Clone, Copy)]
 pub struct PlatformLayout {
-    pub position: Vec2,
-    pub width: f32,
-    pub height: u32,
+    /// Grid position (left edge, bottom of platform)
+    pub grid_x: i32,
+    pub grid_y: i32,
+    /// Width in tiles
+    pub width_tiles: i32,
+    /// Height in tiles
+    pub height_tiles: i32,
+}
+
+impl PlatformLayout {
+    /// Get the center position in world coordinates
+    pub fn center_world(&self) -> Vec2 {
+        use crate::game::tiles::TILE_SIZE;
+        Vec2::new(
+            (self.grid_x as f32 + self.width_tiles as f32 / 2.0) * TILE_SIZE,
+            (self.grid_y as f32 + self.height_tiles as f32 / 2.0) * TILE_SIZE,
+        )
+    }
+
+    /// Get the left edge in world coordinates
+    pub fn left_edge_world(&self) -> f32 {
+        use crate::game::tiles::TILE_SIZE;
+        self.grid_x as f32 * TILE_SIZE
+    }
+
+    /// Get the right edge in world coordinates
+    pub fn right_edge_world(&self) -> f32 {
+        use crate::game::tiles::TILE_SIZE;
+        (self.grid_x + self.width_tiles) as f32 * TILE_SIZE
+    }
+
+    /// Get the bottom edge in world coordinates
+    pub fn bottom_world(&self) -> f32 {
+        use crate::game::tiles::TILE_SIZE;
+        self.grid_y as f32 * TILE_SIZE
+    }
+
+    /// Get the top edge in world coordinates
+    pub fn top_world(&self) -> f32 {
+        use crate::game::tiles::TILE_SIZE;
+        (self.grid_y + self.height_tiles) as f32 * TILE_SIZE
+    }
 }
 
 /// Smart terrain types that can be placed in the level
@@ -223,31 +262,31 @@ impl PlatformGraph {
     /// Generates concrete layout positions for all platforms based on graph connectivity and terrain
     #[allow(clippy::map_entry)]
     pub fn generate_layout(&self, seed: u64) -> std::collections::HashMap<NodeId, PlatformLayout> {
-        use crate::game::tiles::TILE_SIZE;
         use rand::{Rng, SeedableRng};
         use std::collections::{HashMap, HashSet, VecDeque};
 
-        const MIN_HORIZONTAL_SPACING_TILES: f32 = 2.0;
-        const MAX_HORIZONTAL_SPACING_TILES: f32 = 4.0;
-        const MIN_HEIGHT_DELTA_TILES: f32 = -2.;
-        const MAX_HEIGHT_DELTA_TILES: f32 = 2.;
-        const MAX_JUMP_HEIGHT_TILES: f32 = 3.5;
-        const MAX_JUMP_DISTANCE_TILES: f32 = 5.;
+        const MIN_HORIZONTAL_SPACING_TILES: i32 = 2;
+        const MAX_HORIZONTAL_SPACING_TILES: i32 = 4;
+        const MIN_HEIGHT_DELTA_TILES: i32 = -2;
+        const MAX_HEIGHT_DELTA_TILES: i32 = 2;
+        const MAX_JUMP_HEIGHT_TILES: i32 = 3;
+        const MAX_JUMP_DISTANCE_TILES: i32 = 6;
 
         let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
         let mut layouts = HashMap::new();
 
-        // Start node at origin
+        // Start node at grid origin (2, 0)
         let start_node = self.get_node(self.start).unwrap();
-        let start_width = start_node.calculate_width();
-        let start_height = start_node.calculate_height();
+        let start_width_tiles = (start_node.calculate_width() / 32.0) as i32; // Assuming TILE_SIZE = 32
+        let start_height_tiles = start_node.calculate_height() as i32;
 
         layouts.insert(
             self.start,
             PlatformLayout {
-                position: Vec2::new(TILE_SIZE * 2.0, 0.0),
-                width: start_width,
-                height: start_height,
+                grid_x: 2,
+                grid_y: 0,
+                width_tiles: start_width_tiles,
+                height_tiles: start_height_tiles,
             },
         );
 
@@ -272,43 +311,38 @@ impl PlatformGraph {
                 } else {
                     // Calculate position for next platform
                     let next_node = self.get_node(edge.to).unwrap();
-                    let next_width = next_node.calculate_width();
-                    let next_height = next_node.calculate_height();
+                    let next_width_tiles = (next_node.calculate_width() / 32.0) as i32;
+                    let next_height_tiles = next_node.calculate_height() as i32;
 
                     // Calculate edge-to-edge spacing (gap between platforms)
-                    let gap = rng
-                        .random_range(MIN_HORIZONTAL_SPACING_TILES..=MAX_HORIZONTAL_SPACING_TILES)
-                        * TILE_SIZE;
+                    let gap_tiles = rng
+                        .random_range(MIN_HORIZONTAL_SPACING_TILES..=MAX_HORIZONTAL_SPACING_TILES);
 
-                    // Position next platform: current center + half current width + gap + half next width
-                    let next_x = current_layout.position.x
-                        + (current_layout.width / 2.0)
-                        + gap
-                        + (next_width / 2.0);
+                    // Position next platform: current right edge + gap
+                    let next_grid_x = current_layout.grid_x + current_layout.width_tiles + gap_tiles;
 
                     // Randomize vertical position
-                    let y_delta = rng.random_range(MIN_HEIGHT_DELTA_TILES..=MAX_HEIGHT_DELTA_TILES)
-                        * TILE_SIZE;
-                    let mut next_y = (current_layout.position.y + y_delta).max(0.0);
+                    let y_delta = rng.random_range(MIN_HEIGHT_DELTA_TILES..=MAX_HEIGHT_DELTA_TILES);
+                    let mut next_grid_y = (current_layout.grid_y + y_delta).max(0);
 
-                    // Validate jump is possible
-                    let horizontal_dist = (next_x - current_layout.position.x).abs();
-                    let vertical_dist = next_y - current_layout.position.y;
+                    // Validate jump is possible (using grid distances)
+                    let horizontal_dist = (next_grid_x - current_layout.grid_x).abs();
+                    let vertical_dist = next_grid_y - current_layout.grid_y;
 
                     // Adjust if jump is invalid
-                    if horizontal_dist > MAX_JUMP_DISTANCE_TILES * TILE_SIZE
-                        || vertical_dist > MAX_JUMP_HEIGHT_TILES * TILE_SIZE
+                    if horizontal_dist > MAX_JUMP_DISTANCE_TILES
+                        || vertical_dist > MAX_JUMP_HEIGHT_TILES
                     {
                         // Bring it closer to current platform's height
-                        next_y =
-                            current_layout.position.y + (MAX_HEIGHT_DELTA_TILES - 0.5) * TILE_SIZE;
-                        next_y = next_y.max(0.0);
+                        next_grid_y = current_layout.grid_y + (MAX_HEIGHT_DELTA_TILES - 1);
+                        next_grid_y = next_grid_y.max(0);
                     }
 
                     let next_layout = PlatformLayout {
-                        position: Vec2::new(next_x, next_y),
-                        width: next_width,
-                        height: next_height,
+                        grid_x: next_grid_x,
+                        grid_y: next_grid_y,
+                        width_tiles: next_width_tiles,
+                        height_tiles: next_height_tiles,
                     };
 
                     layouts.insert(edge.to, next_layout);
