@@ -31,6 +31,9 @@ pub struct PlayerLevel(pub u8);
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
 pub struct GameLevel(pub u8);
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
+pub struct CompletedYear(pub bool);
+
 impl Season {
     /// Get the next season in the cycle
     pub fn next(&self) -> Self {
@@ -45,9 +48,10 @@ impl Season {
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(PkvStore::new("tmstorey", "glass-half-full"));
-    app.init_resource::<Season>();
     app.init_resource::<PlayerLevel>();
     app.init_resource::<GameLevel>();
+    app.init_resource::<CompletedYear>();
+    app.init_resource::<Season>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
     app.add_systems(
         Update,

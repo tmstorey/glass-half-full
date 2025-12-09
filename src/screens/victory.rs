@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    game::{GameLevel, PlayerLevel, Season},
+    game::{
+        CompletedYear, GameLevel, PlayerLevel, Season,
+        character::{COLUMNS, ROWS},
+    },
     screens::Screen,
 };
 
@@ -12,7 +15,23 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, handle_continue.run_if(in_state(Screen::Victory)));
 }
 
-fn spawn_victory_screen(mut commands: Commands, season: Res<Season>, game_level: Res<GameLevel>) {
+fn spawn_victory_screen(
+    mut commands: Commands,
+    season: Res<Season>,
+    game_level: Res<GameLevel>,
+    completed_year: Res<CompletedYear>,
+    asset_server: Res<AssetServer>,
+) {
+    let complete_message = if game_level.0 == 10 {
+        if *season == Season::Spring {
+            "You completed a whole year!".to_string()
+        } else {
+            format!("You completed all of {}!", *season)
+        }
+    } else {
+        format!("You completed {} Level {}", *season, game_level.0)
+    };
+
     commands
         .spawn((
             Name::new("Victory Screen"),
@@ -43,13 +62,30 @@ fn spawn_victory_screen(mut commands: Commands, season: Res<Season>, game_level:
             // Level info
             parent.spawn((
                 Name::new("Level Info"),
-                Text::new(format!("You completed {} Level {}", *season, game_level.0)),
+                Text::new(complete_message),
                 TextFont {
                     font_size: 30.0,
                     ..default()
                 },
                 TextColor(Color::WHITE),
             ));
+
+            if game_level.0 == 10 {
+                parent.spawn((
+                    Name::new("Unlocked Item Title"),
+                    Text::new("Unlocked clothing items:"),
+                    TextFont {
+                        font_size: 20.0,
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                ));
+                parent.spawn(unlocked_items(
+                    *season,
+                    completed_year.0,
+                    asset_server.clone(),
+                ));
+            }
 
             // Continue instruction
             parent.spawn((
@@ -64,22 +100,105 @@ fn spawn_victory_screen(mut commands: Commands, season: Res<Season>, game_level:
         });
 }
 
+fn unlocked_items(season: Season, completed_year: bool, asset_server: AssetServer) -> impl Bundle {
+    let items = if !completed_year {
+        match season {
+            Season::Summer => {
+                vec![
+                    "clothes/fancy-dress",
+                    "headwear/farming-hat",
+                    "headwear/mining-helmet",
+                ]
+            }
+            Season::Autumn => {
+                vec![
+                    "footwear/socks/blue",
+                    "clothes/queen-dress",
+                    "headwear/witch-hat",
+                ]
+            }
+            Season::Winter => {
+                vec![
+                    "footwear/thighhighs/1",
+                    "clothes/skirt",
+                    "headwear/santa-hat",
+                ]
+            }
+            Season::Spring => {
+                vec![
+                    "underclothes/bikini/blue",
+                    "clothes/short-skirt",
+                    "headwear/bunnyears/1",
+                ]
+            }
+        }
+    } else if season == Season::Summer {
+        vec!["underclothes/underwear/blue"]
+    } else {
+        vec![]
+    };
+    let layout = asset_server.add(TextureAtlasLayout::from_grid(
+        UVec2::new(80, 64),
+        COLUMNS,
+        ROWS,
+        None,
+        None,
+    ));
+    (
+        Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            column_gap: px(10),
+            row_gap: px(10),
+            flex_wrap: FlexWrap::Wrap,
+            max_width: px(800),
+            justify_content: JustifyContent::Center,
+            margin: UiRect::bottom(px(20)),
+            ..default()
+        },
+        Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
+            for item in items {
+                let path = format!("images/character/{}.epng", item);
+                let texture = asset_server.load(path);
+                parent.spawn((
+                    ImageNode {
+                        image: texture,
+                        texture_atlas: Some(TextureAtlas {
+                            layout: layout.clone(),
+                            index: 0, // Idle pose, first frame
+                        }),
+                        ..default()
+                    },
+                    UiTransform::from_scale(Vec2::splat(1.5)),
+                ));
+            }
+        })),
+    )
+}
+
 fn handle_continue(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut season: ResMut<Season>,
     mut game_level: ResMut<GameLevel>,
     mut player_level: ResMut<PlayerLevel>,
+    mut completed_year: ResMut<CompletedYear>,
     mut next_state: ResMut<NextState<Screen>>,
 ) {
     if keyboard.just_pressed(KeyCode::Space) || keyboard.just_pressed(KeyCode::Enter) {
         // Increment level
         game_level.0 = game_level.0.saturating_add(1);
 
-        // Cycle season every 10 levels
         if game_level.0 > 10 {
+            if !completed_year.0 {
+                player_level.0 += 1;
+                if *season == Season::Spring {
+                    completed_year.0 = true;
+                }
+            } else if completed_year.0 && *season == Season::Summer {
+                player_level.0 += 1;
+            }
             *season = season.next();
             game_level.0 %= 10;
-            player_level.0 += 1;
         }
 
         info!("Continuing to {} Level {}", *season, game_level.0);

@@ -389,16 +389,35 @@ fn handle_layer_type_change(
 
                 // Require sufficient player level for certain clothing items
                 let mut allowed_length = available_items.len();
-                if state.current_layer_type == LayerType::Underclothes && player_level.0 < 3 {
-                    allowed_length = 35;
+                if state.current_layer_type == LayerType::Clothes && player_level.0 < 1 {
+                    allowed_length = 6;
+                } else if state.current_layer_type == LayerType::Clothes && player_level.0 < 2 {
+                    allowed_length = 7;
+                } else if state.current_layer_type == LayerType::Clothes && player_level.0 < 3 {
+                    allowed_length = 8;
+                } else if state.current_layer_type == LayerType::Clothes && player_level.0 < 4 {
+                    allowed_length = 9;
+                } else if state.current_layer_type == LayerType::Footwear && player_level.0 < 2 {
+                    allowed_length = 1;
+                } else if state.current_layer_type == LayerType::Footwear && player_level.0 < 3 {
+                    allowed_length = 6;
+                } else if state.current_layer_type == LayerType::Headwear && player_level.0 < 1 {
+                    allowed_length = 10;
+                } else if state.current_layer_type == LayerType::Headwear && player_level.0 < 2 {
+                    allowed_length = 12;
+                } else if state.current_layer_type == LayerType::Headwear && player_level.0 < 3 {
+                    allowed_length = 13;
+                } else if state.current_layer_type == LayerType::Headwear && player_level.0 < 4 {
+                    allowed_length = 14;
                 } else if state.current_layer_type == LayerType::Underclothes && player_level.0 < 4
                 {
+                    allowed_length = 35;
+                } else if state.current_layer_type == LayerType::Underclothes && player_level.0 < 5
+                {
                     allowed_length = 40;
-                } else if state.current_layer_type == LayerType::Underclothes && player_level.0 == 4
+                } else if state.current_layer_type == LayerType::Underclothes && player_level.0 == 5
                 {
                     allowed_length = 45;
-                } else if state.current_layer_type == LayerType::Footwear && player_level.0 < 2 {
-                    allowed_length = 6;
                 }
 
                 // Add empty item for all types except Body and Underclothes
