@@ -206,8 +206,6 @@ impl CausalityGenerator {
         chain: &CausalityChain,
         graph: &mut PlatformGraph,
     ) -> Result<(), String> {
-        use crate::game::tiles::TILE_SIZE;
-
         let terrain_map = chain.terrain_by_location();
 
         for (node_id, terrain_objects) in terrain_map {
@@ -215,23 +213,8 @@ impl CausalityGenerator {
                 .get_node_mut(node_id)
                 .ok_or_else(|| format!("Node {:?} not found in graph", node_id))?;
 
-            // Check if this node will have a water source
-            let has_water_source = terrain_objects
-                .iter()
-                .any(|t| matches!(t, SmartTerrain::WaterSource { .. }));
-
-            if has_water_source {
-                // Ensure platform is 2 tiles high
-                node.height = 2;
-
-                // Ensure platform is at least 4 tiles wider than max water width (5 tiles)
-                // Water can be 3-5 tiles wide, so we need at least 9 tiles (5 + 4 margin)
-                let min_width_tiles = 9.0;
-                let min_width = min_width_tiles * TILE_SIZE;
-                if node.width < min_width {
-                    node.width = min_width;
-                }
-            }
+            // Note: Width and height are now automatically determined by calculate_width() and calculate_height()
+            // based on the terrain objects placed on the platform.
 
             for terrain in terrain_objects {
                 // Avoid adding duplicate goal containers
@@ -261,9 +244,9 @@ mod tests {
     fn create_simple_graph() -> PlatformGraph {
         let mut graph = PlatformGraph::new(NodeId(0), NodeId(2));
 
-        let node1 = PlatformNode::new(Vec2::new(0.0, 0.0), 100.0);
-        let node2 = PlatformNode::new(Vec2::new(200.0, 0.0), 100.0);
-        let node3 = PlatformNode::new(Vec2::new(400.0, 0.0), 100.0);
+        let node1 = PlatformNode::new();
+        let node2 = PlatformNode::new();
+        let node3 = PlatformNode::new();
 
         let id1 = graph.add_node(node1);
         let id2 = graph.add_node(node2);

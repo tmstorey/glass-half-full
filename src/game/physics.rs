@@ -175,7 +175,7 @@ fn character_collision(
         // Check collision with each terrain tile
         for grid_pos in terrain_query.iter() {
             let tile_world_pos = grid_pos.to_world(TILE_SIZE);
-            let tile_left = tile_world_pos.x + TILE_SIZE;
+            let tile_left = tile_world_pos.x;
             let tile_right = tile_world_pos.x + TILE_SIZE * 2.;
             let tile_bottom = tile_world_pos.y;
             let tile_top = tile_world_pos.y + TILE_SIZE;

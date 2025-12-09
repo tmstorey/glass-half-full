@@ -55,11 +55,19 @@ pub fn generate_example_level() {
                 Ok(_) => {
                     println!("\n✓ Applied chain to graph");
 
+                    // Generate layout to see positions
+                    let layouts = graph.generate_layout(42);
+
                     // Show what terrain was placed on each platform
                     println!("\nPlatform terrain layout:");
                     for (i, node) in graph.nodes.iter().enumerate() {
                         if !node.terrain_objects.is_empty() {
-                            println!("  Platform {} at {:?}:", i, node.position);
+                            let node_id = super::graph::NodeId(i);
+                            let position = layouts
+                                .get(&node_id)
+                                .map(|l| l.position)
+                                .unwrap_or(bevy::math::Vec2::ZERO);
+                            println!("  Platform {} at {:?}:", i, position);
                             for terrain in &node.terrain_objects {
                                 println!("    - {:?}", terrain);
                             }

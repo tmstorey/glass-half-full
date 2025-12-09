@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use bevy::prelude::*;
+use bevy::{math::VectorSpace, prelude::*};
 
 use super::super::tiles::GridPosition;
 use crate::{PausableSystems, screens::Screen};
@@ -335,14 +335,15 @@ pub fn spawn_water(
     asset_server: &AssetServer,
     grid_pos: GridPosition,
     water_type: WaterType,
+    z: f32,
 ) -> Entity {
     let texture = asset_server.load("images/objects/water.epng");
     let layout = TextureAtlasLayout::from_grid(
         UVec2::splat(32),
         20, // columns
         7,  // rows
-        None,
-        Some(UVec2::splat(0)),
+        Some(UVec2::splat(2)),
+        Some(UVec2::splat(1)),
     );
 
     commands
@@ -361,6 +362,7 @@ pub fn spawn_water(
             },
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
+            Transform::from_translation(Vec3::ZERO.with_z(z)),
         ))
         .id()
 }
