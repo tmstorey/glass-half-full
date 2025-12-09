@@ -22,6 +22,7 @@ pub enum Season {
     Summer,
     Autumn,
     Winter,
+    Spring,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Reflect, Resource)]
@@ -36,7 +37,8 @@ impl Season {
         match self {
             Season::Summer => Season::Autumn,
             Season::Autumn => Season::Winter,
-            Season::Winter => Season::Summer,
+            Season::Winter => Season::Spring,
+            Season::Spring => Season::Summer,
         }
     }
 }
@@ -65,6 +67,7 @@ pub fn plugin(app: &mut App) {
 pub fn spawn_level(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    season: Res<Season>,
     mut spawn_point: ResMut<level::PlayerSpawnPoint>,
 ) {
     commands.spawn((
@@ -72,7 +75,7 @@ pub fn spawn_level(
         Transform::default(),
         Visibility::default(),
         DespawnOnExit(Screen::Gameplay),
-        children![parallax_background(Season::Summer, asset_server.clone())],
+        children![parallax_background(*season, asset_server.clone())],
     ));
 
     // Generate a procedural level

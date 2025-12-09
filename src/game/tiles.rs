@@ -281,6 +281,7 @@ impl TilesetAtlases {
             Season::Summer => self.summer.clone(),
             Season::Autumn => self.autumn.clone(),
             Season::Winter => self.winter.clone(),
+            Season::Spring => self.summer.clone(),
         }
     }
 }

@@ -19,7 +19,10 @@ pub fn parallax_background(season: Season, asset_server: AssetServer) -> impl Bu
     for layer in 1..=5 {
         let z = layer as f32;
         let scroll_factor = scroll_factors[layer - 1];
-        let name = format!("{}-{}", season, layer).to_lowercase();
+        let name = match season {
+            Season::Spring => format!("summer-{}", layer).to_lowercase(),
+            _ => format!("{}-{}", season, layer).to_lowercase(),
+        };
         let image = asset_server.load_with_settings(
             format!("images/bg/{}.epng", name),
             |settings: &mut ImageLoaderSettings| {
