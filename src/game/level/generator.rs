@@ -206,12 +206,32 @@ impl CausalityGenerator {
         chain: &CausalityChain,
         graph: &mut PlatformGraph,
     ) -> Result<(), String> {
+        use crate::game::tiles::TILE_SIZE;
+
         let terrain_map = chain.terrain_by_location();
 
         for (node_id, terrain_objects) in terrain_map {
             let node = graph
                 .get_node_mut(node_id)
                 .ok_or_else(|| format!("Node {:?} not found in graph", node_id))?;
+
+            // Check if this node will have a water source
+            let has_water_source = terrain_objects
+                .iter()
+                .any(|t| matches!(t, SmartTerrain::WaterSource { .. }));
+
+            if has_water_source {
+                // Ensure platform is 2 tiles high
+                node.height = 2;
+
+                // Ensure platform is at least 4 tiles wider than max water width (5 tiles)
+                // Water can be 3-5 tiles wide, so we need at least 9 tiles (5 + 4 margin)
+                let min_width_tiles = 9.0;
+                let min_width = min_width_tiles * TILE_SIZE;
+                if node.width < min_width {
+                    node.width = min_width;
+                }
+            }
 
             for terrain in terrain_objects {
                 // Avoid adding duplicate goal containers

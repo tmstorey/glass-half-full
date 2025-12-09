@@ -72,7 +72,7 @@ impl Default for CharacterController {
             max_speed: 200.0,
             acceleration: 800.0,
             friction: 600.0,
-            jump_strength: 300.0,
+            jump_strength: 320.0,
             gravity: 500.0,
             is_grounded: false,
             hitbox_width: 16.0,

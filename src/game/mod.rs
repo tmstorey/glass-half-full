@@ -68,6 +68,7 @@ pub fn spawn_level(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     season: Res<Season>,
+    game_level: Res<GameLevel>,
     mut spawn_point: ResMut<level::PlayerSpawnPoint>,
 ) {
     commands.spawn((
@@ -78,12 +79,18 @@ pub fn spawn_level(
         children![parallax_background(*season, asset_server.clone())],
     ));
 
-    // Generate a procedural level
-    let mut graph = level::create_linear_template();
+    // Calculate platform count based on level (start with 5, increase gradually)
+    let platform_count = (5 + (game_level.0 / 2) as usize).min(10);
+
+    // Use season and level to create unique seed
+    let seed = (*season as u64) * 1000 + game_level.0 as u64;
+
+    // Generate a randomized procedural level
+    let mut graph = level::create_random_linear_segment(platform_count, seed);
 
     let config = level::GeneratorConfig {
         difficulty: level::Difficulty::Easy,
-        seed: 123456, // TODO: Make this random or configurable
+        seed,
     };
 
     let mut generator = level::CausalityGenerator::new(config);
@@ -95,9 +102,12 @@ pub fn spawn_level(
             // Update spawn point based on generated level
             level::update_player_spawn_point(&graph, &mut spawn_point);
 
-            // Spawn platforms and terrain objects
-            level::spawn_platforms_from_graph(&mut commands, &graph);
-            level::spawn_terrain_objects_from_graph(&mut commands, &asset_server, &graph);
+            // Spawn terrain objects first to get exclusion map
+            let exclusions =
+                level::spawn_terrain_objects_from_graph(&mut commands, &asset_server, &graph);
+
+            // Then spawn platforms, excluding positions with water/dirt
+            level::spawn_platforms_from_graph(&mut commands, &graph, &exclusions);
 
             info!("Successfully generated procedural level");
         }
@@ -107,30 +117,16 @@ pub fn spawn_level(
     }
 }
 
-/// System to handle level completion and transition to next level
+/// System to handle level completion and transition to victory screen
 fn handle_level_complete(
     mut level_complete_reader: MessageReader<LevelCompleteMessage>,
-    mut season: ResMut<Season>,
-    mut game_level: ResMut<GameLevel>,
     mut next_state: ResMut<NextState<Screen>>,
 ) {
     for _ in level_complete_reader.read() {
-        // Increment level
-        game_level.0 = game_level.0.saturating_add(1);
+        info!("Level complete! Showing victory screen");
 
-        // Cycle season every 10 levels
-        if game_level.0 > 10 {
-            *season = season.next();
-            game_level.0 %= 10;
-        }
-
-        info!(
-            "Level complete! Moving to {} Level {}",
-            *season, game_level.0
-        );
-
-        // Transition back to Gameplay to trigger level reload
-        // This will despawn all DespawnOnExit(Gameplay) entities and respawn a new level
-        next_state.set(Screen::Gameplay);
+        // Transition to Victory screen
+        // The victory screen will handle incrementing the level and transitioning to Gameplay
+        next_state.set(Screen::Victory);
     }
 }

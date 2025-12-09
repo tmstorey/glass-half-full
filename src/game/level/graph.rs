@@ -34,6 +34,8 @@ pub struct PlatformNode {
     pub position: Vec2,
     /// Width of the platform in world units
     pub width: f32,
+    /// Height of the platform in tiles (1 or 2)
+    pub height: u32,
     /// Connections to other platforms
     pub edges: Vec<Edge>,
     /// Smart terrain objects placed on this platform
@@ -45,9 +47,15 @@ impl PlatformNode {
         Self {
             position,
             width,
+            height: 1,
             edges: Vec::new(),
             terrain_objects: Vec::new(),
         }
+    }
+
+    pub fn with_height(mut self, height: u32) -> Self {
+        self.height = height;
+        self
     }
 
     pub fn add_edge(&mut self, to: NodeId, connection_type: ConnectionType) {

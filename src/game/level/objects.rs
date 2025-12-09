@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 
+use super::super::tiles::GridPosition;
 use crate::{PausableSystems, screens::Screen};
 
 pub fn plugin(app: &mut App) {
@@ -328,11 +329,11 @@ impl WaterAnimation {
     }
 }
 
-/// Spawns a water object at the specified position
+/// Spawns a water object at the specified grid position
 pub fn spawn_water(
     commands: &mut Commands,
     asset_server: &AssetServer,
-    position: Vec3,
+    grid_pos: GridPosition,
     water_type: WaterType,
 ) -> Entity {
     let texture = asset_server.load("images/objects/water.epng");
@@ -341,7 +342,7 @@ pub fn spawn_water(
         20, // columns
         7,  // rows
         None,
-        Some(UVec2::splat(1)),
+        Some(UVec2::splat(0)),
     );
 
     commands
@@ -349,6 +350,7 @@ pub fn spawn_water(
             Name::new(format!("Water {:?}", water_type)),
             Water::new(water_type),
             WaterAnimation::new(water_type),
+            grid_pos,
             Sprite {
                 image: texture,
                 texture_atlas: Some(TextureAtlas {
@@ -357,7 +359,6 @@ pub fn spawn_water(
                 }),
                 ..default()
             },
-            Transform::from_translation(position),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
         ))

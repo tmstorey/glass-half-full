@@ -3,11 +3,107 @@
 use super::graph::{ConnectionType, NodeId, PlatformGraph, PlatformNode};
 use crate::game::tiles::TILE_SIZE;
 use bevy::prelude::*;
+use rand::Rng;
 
 // Player can jump ~4 tiles high and ~6 tiles across
 const MAX_JUMP_HEIGHT_TILES: f32 = 3.5;
-const MAX_JUMP_DISTANCE_TILES: f32 = 5.5;
+const MAX_JUMP_DISTANCE_TILES: f32 = 6.5;
 const PLATFORM_WIDTH_TILES: f32 = 4.0;
+
+// Safe randomization ranges (with margin of safety)
+const MIN_HORIZONTAL_SPACING_TILES: f32 = 3.5;
+const MAX_HORIZONTAL_SPACING_TILES: f32 = 6.0;
+const MIN_HEIGHT_DELTA_TILES: f32 = -2.0;
+const MAX_HEIGHT_DELTA_TILES: f32 = 3.0;
+
+/// Validates if a jump from one position to another is possible
+fn is_jump_valid(from: Vec2, to: Vec2) -> bool {
+    let horizontal = (to.x - from.x).abs();
+    let vertical = to.y - from.y;
+
+    // Can't jump more than MAX_JUMP_DISTANCE_TILES horizontally
+    if horizontal > MAX_JUMP_DISTANCE_TILES * TILE_SIZE {
+        return false;
+    }
+
+    // Can jump up to MAX_JUMP_HEIGHT_TILES
+    if vertical > MAX_JUMP_HEIGHT_TILES * TILE_SIZE {
+        return false;
+    }
+
+    // Don't allow platforms below y=0
+    if to.y < 0.0 {
+        return false;
+    }
+
+    true
+}
+
+/// Creates a randomized linear platform layout
+///
+/// Generates a sequence of platforms with randomized spacing and height,
+/// while ensuring all jumps are within the player's capabilities.
+pub fn create_random_linear_segment(platform_count: usize, seed: u64) -> PlatformGraph {
+    use rand::SeedableRng;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+
+    let start_id = NodeId(0);
+    let goal_id = NodeId(platform_count - 1);
+    let mut graph = PlatformGraph::new(start_id, goal_id);
+
+    let mut platforms = Vec::new();
+    let mut current_x = TILE_SIZE * 2.0;
+    let mut current_y = TILE_SIZE * 0.0; // Start at ground level
+
+    // Generate platforms
+    for _ in 0..platform_count {
+        platforms.push(PlatformNode::new(
+            Vec2::new(current_x, current_y),
+            TILE_SIZE * PLATFORM_WIDTH_TILES,
+        ));
+
+        // Randomize next platform position
+        let x_spacing =
+            rng.random_range(MIN_HORIZONTAL_SPACING_TILES..=MAX_HORIZONTAL_SPACING_TILES);
+        let y_delta = rng.random_range(MIN_HEIGHT_DELTA_TILES..=MAX_HEIGHT_DELTA_TILES);
+
+        current_x += x_spacing * TILE_SIZE;
+        current_y = (current_y + y_delta * TILE_SIZE).max(0.0); // Ensure y >= 0
+
+        // Validate the jump would be possible
+        if platforms.len() > 1 {
+            let from = platforms[platforms.len() - 2].position;
+            let to = Vec2::new(current_x, current_y);
+
+            // If jump is invalid, adjust height to make it valid
+            if !is_jump_valid(from, to) {
+                // Try bringing it closer to the previous platform's height
+                current_y = from.y + (MAX_HEIGHT_DELTA_TILES - 0.5) * TILE_SIZE;
+                current_y = current_y.max(0.0);
+            }
+        }
+    }
+
+    // Add all platforms to the graph
+    let ids: Vec<NodeId> = platforms.into_iter().map(|p| graph.add_node(p)).collect();
+
+    // Connect platforms in sequence with bidirectional edges
+    for i in 0..ids.len() - 1 {
+        // Forward connection
+        graph
+            .get_node_mut(ids[i])
+            .unwrap()
+            .add_edge(ids[i + 1], ConnectionType::Jump);
+
+        // Backward connection (for backtracking)
+        graph
+            .get_node_mut(ids[i + 1])
+            .unwrap()
+            .add_edge(ids[i], ConnectionType::Jump);
+    }
+
+    graph
+}
 
 /// Creates a simple linear platform layout
 pub fn create_linear_template() -> PlatformGraph {
@@ -242,6 +338,39 @@ mod tests {
         let graph = create_linear_template();
         assert!(graph.validate().is_ok());
         assert_eq!(graph.nodes.len(), 5);
+    }
+
+    #[test]
+    fn test_random_linear_segment() {
+        // Test various platform counts
+        for count in 3..=10 {
+            let graph = create_random_linear_segment(count, 12345);
+            assert!(
+                graph.validate().is_ok(),
+                "Graph validation failed for {} platforms",
+                count
+            );
+            assert_eq!(graph.nodes.len(), count);
+
+            // Verify all platforms are at y >= 0
+            for node in &graph.nodes {
+                assert!(
+                    node.position.y >= 0.0,
+                    "Platform below y=0 at y={}",
+                    node.position.y
+                );
+            }
+        }
+
+        // Test with different seeds to ensure variety
+        let graph1 = create_random_linear_segment(5, 111);
+        let graph2 = create_random_linear_segment(5, 222);
+
+        // Platforms should be in different positions (except the first one)
+        assert_ne!(
+            graph1.nodes[1].position, graph2.nodes[1].position,
+            "Different seeds should produce different layouts"
+        );
     }
 
     #[test]

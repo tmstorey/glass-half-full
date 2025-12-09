@@ -23,6 +23,7 @@ pub use spawn::{
 };
 pub use templates::{
     create_branching_template, create_cul_de_sac_template, create_linear_template,
+    create_random_linear_segment,
 };
 
 pub fn plugin(app: &mut App) {
