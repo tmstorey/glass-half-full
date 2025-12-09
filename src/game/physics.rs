@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
-use super::character::{AnimationState, Character, CharacterAnimation, Direction, OneShotAnimation};
+use super::character::{
+    AnimationState, Character, CharacterAnimation, Direction, OneShotAnimation,
+};
 use super::controls::Action;
 use super::tiles::{GridPosition, TILE_SIZE, TerrainTile};
-use crate::pixel_camera::PixelCamera;
 use crate::PausableSystems;
+use crate::pixel_camera::PixelCamera;
 use crate::screens::Screen;
 
 pub fn plugin(app: &mut App) {
@@ -224,10 +226,11 @@ fn decrement_oneshot_animation(
     mut query: Query<(&mut OneShotAnimation, &CharacterAnimation), With<Character>>,
 ) {
     for (mut oneshot, animation) in &mut query {
-        if let Some(frames) = oneshot.frames_remaining {
-            if animation.just_changed() && frames > 0 {
-                oneshot.frames_remaining = Some(frames - 1);
-            }
+        if let Some(frames) = oneshot.frames_remaining
+            && animation.just_changed()
+            && frames > 0
+        {
+            oneshot.frames_remaining = Some(frames - 1);
         }
     }
 }
@@ -235,7 +238,15 @@ fn decrement_oneshot_animation(
 /// System to update character animation based on velocity and input
 fn update_character_animation(
     action_query: Query<&ActionState<Action>>,
-    mut query: Query<(&Velocity, &CharacterController, &mut CharacterAnimation, &mut OneShotAnimation), With<Character>>,
+    mut query: Query<
+        (
+            &Velocity,
+            &CharacterController,
+            &mut CharacterAnimation,
+            &mut OneShotAnimation,
+        ),
+        With<Character>,
+    >,
 ) {
     let Ok(action_state) = action_query.single() else {
         return;
@@ -291,14 +302,14 @@ fn camera_follow_player(
     camera_transform.translation.x = camera_transform.translation.x
         + (character_transform.translation.x - camera_transform.translation.x) * smoothness * dt;
     camera_transform.translation.y = camera_transform.translation.y
-        + (character_transform.translation.y + y_offset - camera_transform.translation.y) * smoothness * dt;
+        + (character_transform.translation.y + y_offset - camera_transform.translation.y)
+            * smoothness
+            * dt;
     camera_transform.translation.y = camera_transform.translation.y.max(-12.);
 }
 
 /// System to respawn the character if they fall off the level
-fn respawn_on_fall(
-    mut character_query: Query<(&mut Transform, &mut Velocity), With<Character>>,
-) {
+fn respawn_on_fall(mut character_query: Query<(&mut Transform, &mut Velocity), With<Character>>) {
     let Ok((mut transform, mut velocity)) = character_query.single_mut() else {
         return;
     };

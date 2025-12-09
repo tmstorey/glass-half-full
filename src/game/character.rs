@@ -387,7 +387,8 @@ impl CharacterAnimation {
         self.timer.tick(delta);
         if self.timer.just_finished() {
             let (_, frame_count, starting_frame, _) = self.state.get_animation_config();
-            self.current_frame = (self.current_frame + 1 - starting_frame) % frame_count + starting_frame;
+            self.current_frame =
+                (self.current_frame + 1 - starting_frame) % frame_count + starting_frame;
         }
     }
 
