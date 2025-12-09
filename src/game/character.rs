@@ -462,7 +462,7 @@ fn create_bucket_sprite(
         },
         Bucket,
         Anchor::CENTER,
-        Transform::from_translation(Vec3::new(0., 0., 10.)),
+        Transform::from_translation(Vec3::new(0., 0., 1.)),
     )
 }
 
