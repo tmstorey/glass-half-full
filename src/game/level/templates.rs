@@ -283,7 +283,7 @@ mod tests {
 
             // Generate layout and verify all platforms are at y >= 0
             let layouts = graph.generate_layout(12345);
-            for (_node_id, layout) in &layouts {
+            for layout in layouts.values() {
                 assert!(
                     layout.position.y >= 0.0,
                     "Platform below y=0 at y={}",

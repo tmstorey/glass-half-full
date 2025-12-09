@@ -4,11 +4,14 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::{
-    game::{GameLevel, controls::Action},
+    game::controls::Action,
     menus::Menu,
     screens::Screen,
     theme::widget,
 };
+
+#[cfg(feature = "dev_native")]
+use crate::game::GameLevel;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_pause_menu);
