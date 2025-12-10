@@ -243,7 +243,7 @@ fn spawn_other_terrain_objects(
 
                 // Spawn blocking wall above fire (only if not extinguished)
                 if !extinguished {
-                    spawn_fire_wall(commands, layout, world_pos);
+                    spawn_fire_wall(commands, world_pos);
                 }
             }
             SmartTerrain::SnowMeltFire { extinguished } => {
@@ -448,7 +448,7 @@ fn spawn_goal_platform(
 }
 
 /// Spawns a 3x5 blocking wall above a fire
-fn spawn_fire_wall(commands: &mut Commands, _layout: &PlatformLayout, fire_world_pos: Vec3) {
+fn spawn_fire_wall(commands: &mut Commands, fire_world_pos: Vec3) {
     // Convert fire world position to grid coordinates
     let fire_grid_x = (fire_world_pos.x / TILE_SIZE) as i32;
     let fire_grid_y = (fire_world_pos.y / TILE_SIZE) as i32;

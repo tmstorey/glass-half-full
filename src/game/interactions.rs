@@ -213,9 +213,10 @@ fn interact_with_snow(
 
 /// System to handle player touching active fire (reset to spawn point)
 fn touch_active_fire(
-    fire_query: Query<(&Transform, &Fire), Without<Character>>,
+    mut fire_query: Query<(&Transform, &mut Fire), Without<Character>>,
     spawn_point: Res<PlayerSpawnPoint>,
     mut character_transform_query: Query<&mut Transform, With<Character>>,
+    mut bucket_content: ResMut<BucketContent>,
 ) {
     let Ok(character_transform) = character_transform_query.single() else {
         return;
@@ -239,7 +240,16 @@ fn touch_active_fire(
             // Reset player to spawn point
             if let Ok(mut transform) = character_transform_query.single_mut() {
                 transform.translation = spawn_point.position;
-                info!("Player touched fire! Resetting to spawn point.");
+
+                // Reset all fires to Active state
+                for (_, mut fire) in &mut fire_query {
+                    fire.ignite();
+                }
+
+                // Reset bucket contents
+                *bucket_content = BucketContent::Empty;
+
+                info!("Player touched fire! Resetting to spawn point and level state.");
             }
             return; // Only handle one fire collision per frame
         }

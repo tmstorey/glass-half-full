@@ -313,6 +313,8 @@ fn camera_follow_player(
 fn respawn_on_fall(
     spawn_point: Res<PlayerSpawnPoint>,
     mut character_query: Query<(&mut Transform, &mut Velocity), With<Character>>,
+    mut fire_query: Query<&mut super::level::objects::Fire>,
+    mut bucket_content: ResMut<super::level::BucketContent>,
 ) {
     let Ok((mut transform, mut velocity)) = character_query.single_mut() else {
         return;
@@ -327,5 +329,15 @@ fn respawn_on_fall(
         // Reset velocity to prevent continued falling
         velocity.x = 0.0;
         velocity.y = 0.0;
+
+        // Reset all fires to Active state
+        for mut fire in &mut fire_query {
+            fire.ignite();
+        }
+
+        // Reset bucket contents
+        *bucket_content = super::level::BucketContent::Empty;
+
+        info!("Player fell! Respawned and reset level state.");
     }
 }

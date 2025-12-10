@@ -2692,7 +2692,7 @@ dependencies = [
 
 [[package]]
 name = "glass-half-full"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bevy",
  "bevy_pkv",
