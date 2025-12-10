@@ -6,18 +6,53 @@ use bevy::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(pub usize);
 
+/// Layout direction hint for platform placement
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayoutDirection {
+    /// Horizontal jump to the right
+    Right,
+    /// Horizontal jump to the left
+    Left,
+    /// Jump diagonally up and to the right
+    RightUp,
+    /// Jump diagonally up and to the left
+    LeftUp,
+    /// Fall/jump diagonally down and to the right
+    RightDown,
+    /// Fall/jump diagonally down and to the left
+    LeftDown,
+}
+
+impl Default for LayoutDirection {
+    fn default() -> Self {
+        Self::Right
+    }
+}
+
 /// Represents the type of connection between platforms
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ConnectionType {
     /// A jump that's always possible
-    Jump,
+    Jump { direction: LayoutDirection },
     /// A one-way fall (can go down but not up)
-    Fall,
+    Fall { direction: LayoutDirection },
     /// Requires a moving platform to be active
     MovingPlatform {
         platform_entity: Option<Entity>,
         required: bool,
+        direction: LayoutDirection,
     },
+}
+
+impl ConnectionType {
+    /// Extract the layout direction from this connection type
+    pub fn direction(&self) -> LayoutDirection {
+        match self {
+            ConnectionType::Jump { direction } => *direction,
+            ConnectionType::Fall { direction } => *direction,
+            ConnectionType::MovingPlatform { direction, .. } => *direction,
+        }
+    }
 }
 
 /// An edge connecting two platform nodes
@@ -180,8 +215,10 @@ pub enum SmartTerrain {
     WaterSource,
     /// Infinite snow source
     SnowSource,
-    /// Fire that can be extinguished
-    Fire { extinguished: bool },
+    /// Fire that blocks passage with a wall (must be extinguished to pass)
+    BlockingFire { extinguished: bool },
+    /// Fire used to melt snow into water (no wall)
+    SnowMeltFire { extinguished: bool },
     /// The goal container that needs to be filled twice
     GoalContainer { fill_count: u8, target: u8 },
     /// A container that activates something when filled
@@ -314,15 +351,43 @@ impl PlatformGraph {
                     let next_width_tiles = (next_node.calculate_width() / 32.0) as i32;
                     let next_height_tiles = next_node.calculate_height() as i32;
 
+                    // Get direction hint from edge
+                    let direction = edge.connection_type.direction();
+
+                    // Determine horizontal direction and vertical bias
+                    let (x_direction, y_bias) = match direction {
+                        LayoutDirection::Right => (1, 0),      // Move right, neutral height
+                        LayoutDirection::Left => (-1, 0),      // Move left, neutral height
+                        LayoutDirection::RightUp => (1, 1),    // Move right and prefer upward
+                        LayoutDirection::LeftUp => (-1, 1),    // Move left and prefer upward
+                        LayoutDirection::RightDown => (1, -1), // Move right and prefer downward
+                        LayoutDirection::LeftDown => (-1, -1), // Move left and prefer downward
+                    };
+
                     // Calculate edge-to-edge spacing (gap between platforms)
                     let gap_tiles = rng
                         .random_range(MIN_HORIZONTAL_SPACING_TILES..=MAX_HORIZONTAL_SPACING_TILES);
 
-                    // Position next platform: current right edge + gap
-                    let next_grid_x = current_layout.grid_x + current_layout.width_tiles + gap_tiles;
+                    // Position next platform based on direction
+                    let next_grid_x = if x_direction > 0 {
+                        // Moving right: place after current platform
+                        current_layout.grid_x + current_layout.width_tiles + gap_tiles
+                    } else {
+                        // Moving left: place before current platform
+                        current_layout.grid_x - gap_tiles - next_width_tiles
+                    };
 
-                    // Randomize vertical position
-                    let y_delta = rng.random_range(MIN_HEIGHT_DELTA_TILES..=MAX_HEIGHT_DELTA_TILES);
+                    // Calculate vertical position with directional bias
+                    let y_delta = if y_bias != 0 {
+                        // Biased direction: prefer up or down
+                        let biased_delta = rng
+                            .random_range(0..=MAX_HEIGHT_DELTA_TILES)
+                            * y_bias;
+                        biased_delta
+                    } else {
+                        // Neutral direction: randomize
+                        rng.random_range(MIN_HEIGHT_DELTA_TILES..=MAX_HEIGHT_DELTA_TILES)
+                    };
                     let mut next_grid_y = (current_layout.grid_y + y_delta).max(0);
 
                     // Validate jump is possible (using grid distances)
@@ -374,11 +439,21 @@ mod tests {
         graph
             .get_node_mut(id1)
             .unwrap()
-            .add_edge(id2, ConnectionType::Jump);
+            .add_edge(
+                id2,
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Right,
+                },
+            );
         graph
             .get_node_mut(id2)
             .unwrap()
-            .add_edge(id3, ConnectionType::Jump);
+            .add_edge(
+                id3,
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Right,
+                },
+            );
 
         assert!(graph.validate().is_ok());
     }

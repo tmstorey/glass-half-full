@@ -168,7 +168,7 @@ fn character_collision(
         let char_left = char_x - half_width;
         let char_right = char_x + half_width;
         let char_bottom = char_y - half_height;
-        let char_top = char_y + half_height;
+        let char_top = char_y + half_height - 50.;
 
         controller.is_grounded = false;
 
@@ -206,7 +206,7 @@ fn character_collision(
                     controller.is_grounded = true;
                 } else if min_overlap == overlap_bottom && velocity.y > 0.0 {
                     // Collision from above (character hitting ceiling)
-                    transform.translation.y = tile_bottom - half_height;
+                    transform.translation.y = tile_bottom - half_height + 50.;
                     velocity.y = 0.0;
                 } else if min_overlap == overlap_left && velocity.x > 0.0 {
                     // Collision from left

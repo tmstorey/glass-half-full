@@ -2,6 +2,7 @@
 
 use super::generator::{CausalityGenerator, Difficulty, GeneratorConfig};
 use super::templates::create_linear_template;
+use crate::game::Season;
 
 /// Example function that demonstrates the level generation system
 pub fn generate_example_level() {
@@ -25,6 +26,8 @@ pub fn generate_example_level() {
     let config = GeneratorConfig {
         difficulty: Difficulty::Easy,
         seed: 42,
+        season: Season::Summer,
+        completed_year: false,
     };
 
     let mut generator = CausalityGenerator::new(config);

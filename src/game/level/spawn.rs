@@ -55,7 +55,14 @@ pub fn spawn_level_from_graph(
                     .iter()
                     .any(|t| matches!(t, SmartTerrain::WaterSource));
 
-                if has_water_source {
+                let has_fire = node.terrain_objects.iter().any(|t| {
+                    matches!(
+                        t,
+                        SmartTerrain::BlockingFire { .. } | SmartTerrain::SnowMeltFire { .. }
+                    )
+                });
+
+                if has_water_source && !has_fire {
                     // Spawn specialized water platform (2 tiles high, with water integrated)
                     spawn_water_platform(commands, asset_server, node, layout);
                 } else {
@@ -226,13 +233,26 @@ fn spawn_other_terrain_objects(
             SmartTerrain::SnowSource => {
                 super::objects::spawn_snow(commands, asset_server, world_pos);
             }
-            SmartTerrain::Fire { extinguished } => {
+            SmartTerrain::BlockingFire { extinguished } => {
                 let fire_state = if *extinguished {
                     FireState::Extinguished
                 } else {
                     FireState::Active
                 };
-                super::objects::spawn_fire(commands, asset_server, world_pos, fire_state);
+                spawn_fire(commands, asset_server, world_pos, fire_state);
+
+                // Spawn blocking wall above fire (only if not extinguished)
+                if !extinguished {
+                    spawn_fire_wall(commands, layout, world_pos);
+                }
+            }
+            SmartTerrain::SnowMeltFire { extinguished } => {
+                let fire_state = if *extinguished {
+                    FireState::Extinguished
+                } else {
+                    FireState::Active
+                };
+                spawn_fire(commands, asset_server, world_pos, fire_state);
             }
             SmartTerrain::GoalContainer { .. } => {
                 let container_pos =
@@ -420,6 +440,29 @@ fn spawn_goal_platform(
             let grid_pos = GridPosition::primary(tile_x, tile_y);
             commands.spawn((
                 Name::new(format!("Goal right wall at ({}, {})", tile_x, tile_y)),
+                grid_pos,
+                TerrainTile::Grass,
+                DespawnOnExit(Screen::Gameplay),
+            ));
+        }
+    }
+}
+
+/// Spawns a 3x5 blocking wall above a fire
+fn spawn_fire_wall(commands: &mut Commands, _layout: &PlatformLayout, fire_world_pos: Vec3) {
+    // Convert fire world position to grid coordinates
+    let fire_grid_x = (fire_world_pos.x / TILE_SIZE) as i32;
+    let fire_grid_y = (fire_world_pos.y / TILE_SIZE) as i32;
+
+    // Spawn 3-tile wide, 5-tile high wall above the fire
+    for y_offset in 1..=5 {
+        for x_offset in -1..=1 {
+            let grid_pos = GridPosition::primary(fire_grid_x + x_offset, fire_grid_y + y_offset);
+            commands.spawn((
+                Name::new(format!(
+                    "Fire wall at ({}, {})",
+                    grid_pos.x, grid_pos.y
+                )),
                 grid_pos,
                 TerrainTile::Grass,
                 DespawnOnExit(Screen::Gameplay),

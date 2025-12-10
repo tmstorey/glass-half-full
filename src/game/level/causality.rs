@@ -195,14 +195,14 @@ mod tests {
             location: NodeId(0),
         });
 
-        // Snow + Fire = Water (fire extinguished)
+        // Snow + Fire = Water (snow-melting fire)
         chain.add_node(CausalityNode {
             effect: Effect::WaterBucket,
             cause: Cause::BucketAt {
                 content: BucketContent::Snow,
                 location: NodeId(1),
             },
-            terrain: SmartTerrain::Fire {
+            terrain: SmartTerrain::SnowMeltFire {
                 extinguished: false,
             },
             location: NodeId(1),

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use super::graph::{ConnectionType, NodeId, PlatformGraph, PlatformNode};
+use super::graph::{ConnectionType, LayoutDirection, NodeId, PlatformGraph, PlatformNode};
 use crate::game::tiles::TILE_SIZE;
 use bevy::prelude::*;
 use rand::Rng;
@@ -71,17 +71,27 @@ pub fn create_random_linear_segment(platform_count: usize, _seed: u64) -> Platfo
 
     // Connect platforms in sequence with bidirectional edges
     for i in 0..ids.len() - 1 {
-        // Forward connection
+        // Forward connection (going right)
         graph
             .get_node_mut(ids[i])
             .unwrap()
-            .add_edge(ids[i + 1], ConnectionType::Jump);
+            .add_edge(
+                ids[i + 1],
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Right,
+                },
+            );
 
-        // Backward connection (for backtracking)
+        // Backward connection (for backtracking, going left)
         graph
             .get_node_mut(ids[i + 1])
             .unwrap()
-            .add_edge(ids[i], ConnectionType::Jump);
+            .add_edge(
+                ids[i],
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Left,
+                },
+            );
     }
 
     graph
@@ -110,13 +120,23 @@ pub fn create_linear_template() -> PlatformGraph {
         graph
             .get_node_mut(ids[i])
             .unwrap()
-            .add_edge(ids[i + 1], ConnectionType::Jump);
+            .add_edge(
+                ids[i + 1],
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Right,
+                },
+            );
 
         // Allow backtracking (jumping back)
         graph
             .get_node_mut(ids[i + 1])
             .unwrap()
-            .add_edge(ids[i], ConnectionType::Jump);
+            .add_edge(
+                ids[i],
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Left,
+                },
+            );
     }
 
     graph
@@ -143,55 +163,110 @@ pub fn create_branching_template() -> PlatformGraph {
     graph
         .get_node_mut(ids[0])
         .unwrap()
-        .add_edge(ids[1], ConnectionType::Jump);
+        .add_edge(
+            ids[1],
+            ConnectionType::Jump {
+                direction: LayoutDirection::RightUp,
+            },
+        );
     graph
         .get_node_mut(ids[0])
         .unwrap()
-        .add_edge(ids[3], ConnectionType::Jump);
+        .add_edge(
+            ids[3],
+            ConnectionType::Jump {
+                direction: LayoutDirection::RightDown,
+            },
+        );
 
     // Upper path
     graph
         .get_node_mut(ids[1])
         .unwrap()
-        .add_edge(ids[2], ConnectionType::Jump);
+        .add_edge(
+            ids[2],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
     graph
         .get_node_mut(ids[2])
         .unwrap()
-        .add_edge(ids[5], ConnectionType::Jump);
+        .add_edge(
+            ids[5],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
 
     // Lower path
     graph
         .get_node_mut(ids[3])
         .unwrap()
-        .add_edge(ids[4], ConnectionType::Jump);
+        .add_edge(
+            ids[4],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
     graph
         .get_node_mut(ids[4])
         .unwrap()
-        .add_edge(ids[5], ConnectionType::Jump);
+        .add_edge(
+            ids[5],
+            ConnectionType::Jump {
+                direction: LayoutDirection::RightUp,
+            },
+        );
 
     // Converge to goal
     graph
         .get_node_mut(ids[5])
         .unwrap()
-        .add_edge(ids[6], ConnectionType::Jump);
+        .add_edge(
+            ids[6],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
 
     // Allow backtracking on main path
     graph
         .get_node_mut(ids[1])
         .unwrap()
-        .add_edge(ids[0], ConnectionType::Jump);
+        .add_edge(
+            ids[0],
+            ConnectionType::Jump {
+                direction: LayoutDirection::LeftDown,
+            },
+        );
     graph
         .get_node_mut(ids[3])
         .unwrap()
-        .add_edge(ids[0], ConnectionType::Jump);
+        .add_edge(
+            ids[0],
+            ConnectionType::Jump {
+                direction: LayoutDirection::LeftUp,
+            },
+        );
     graph
         .get_node_mut(ids[5])
         .unwrap()
-        .add_edge(ids[2], ConnectionType::Jump);
+        .add_edge(
+            ids[2],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Left,
+            },
+        );
     graph
         .get_node_mut(ids[5])
         .unwrap()
-        .add_edge(ids[4], ConnectionType::Jump);
+        .add_edge(
+            ids[4],
+            ConnectionType::Jump {
+                direction: LayoutDirection::LeftDown,
+            },
+        );
 
     graph
 }
@@ -215,45 +290,90 @@ pub fn create_cul_de_sac_template() -> PlatformGraph {
     graph
         .get_node_mut(ids[0])
         .unwrap()
-        .add_edge(ids[1], ConnectionType::Jump);
+        .add_edge(
+            ids[1],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
     graph
         .get_node_mut(ids[1])
         .unwrap()
-        .add_edge(ids[3], ConnectionType::Jump);
+        .add_edge(
+            ids[3],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
     graph
         .get_node_mut(ids[3])
         .unwrap()
-        .add_edge(ids[4], ConnectionType::Jump);
+        .add_edge(
+            ids[4],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
 
-    // Cul-de-sac 1 (connected to platform 1)
+    // Cul-de-sac 1 (connected to platform 1, going up)
     graph
         .get_node_mut(ids[1])
         .unwrap()
-        .add_edge(ids[2], ConnectionType::Jump);
+        .add_edge(
+            ids[2],
+            ConnectionType::Jump {
+                direction: LayoutDirection::RightUp,
+            },
+        );
     graph
         .get_node_mut(ids[2])
         .unwrap()
-        .add_edge(ids[1], ConnectionType::Jump);
+        .add_edge(
+            ids[1],
+            ConnectionType::Jump {
+                direction: LayoutDirection::LeftDown,
+            },
+        );
 
-    // Cul-de-sac 2 (connected to platform 3)
+    // Cul-de-sac 2 (connected to platform 3, going up)
     graph
         .get_node_mut(ids[3])
         .unwrap()
-        .add_edge(ids[5], ConnectionType::Jump);
+        .add_edge(
+            ids[5],
+            ConnectionType::Jump {
+                direction: LayoutDirection::RightUp,
+            },
+        );
     graph
         .get_node_mut(ids[5])
         .unwrap()
-        .add_edge(ids[3], ConnectionType::Jump);
+        .add_edge(
+            ids[3],
+            ConnectionType::Jump {
+                direction: LayoutDirection::LeftDown,
+            },
+        );
 
     // Backtracking on main path
     graph
         .get_node_mut(ids[1])
         .unwrap()
-        .add_edge(ids[0], ConnectionType::Jump);
+        .add_edge(
+            ids[0],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Left,
+            },
+        );
     graph
         .get_node_mut(ids[3])
         .unwrap()
-        .add_edge(ids[1], ConnectionType::Jump);
+        .add_edge(
+            ids[1],
+            ConnectionType::Jump {
+                direction: LayoutDirection::Left,
+            },
+        );
 
     graph
 }

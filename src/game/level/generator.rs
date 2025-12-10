@@ -2,6 +2,7 @@
 
 use super::causality::{BucketContent, CausalityChain, CausalityNode, Cause, Effect};
 use super::graph::{NodeId, PlatformGraph, SmartTerrain};
+use crate::game::Season;
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -12,6 +13,10 @@ pub struct GeneratorConfig {
     pub difficulty: Difficulty,
     /// Random seed for reproducibility
     pub seed: u64,
+    /// Current season (affects puzzle types)
+    pub season: Season,
+    /// Whether the player has completed a year
+    pub completed_year: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,12 +113,35 @@ impl CausalityGenerator {
         chain: &mut CausalityChain,
         graph: &PlatformGraph,
     ) -> Result<(), String> {
-        // Choose between direct water source or snow + fire conversion
-        let use_fire = self.rng.random_bool(0.3); // 30% chance to use fire mechanic
+        // Only use snow puzzles in Winter
+        let can_use_snow = matches!(self.config.season, Season::Winter);
 
-        if use_fire && self.config.difficulty != Difficulty::Easy {
-            // Add fire + snow conversion
-            self.add_fire_conversion_step(chain, graph)?;
+        // Decide whether to use fire mechanic
+        let use_fire = if can_use_snow {
+            // In winter, 50% chance to use fire+snow puzzle
+            self.rng.random_bool(0.5)
+        } else {
+            // In other seasons, can use BlockingFire from Autumn onwards
+            let can_use_blocking_fire =
+                matches!(self.config.season, Season::Autumn | Season::Spring)
+                    || self.config.completed_year;
+
+            if can_use_blocking_fire && self.config.difficulty != Difficulty::Easy {
+                // 30% chance to use blocking fire puzzle
+                self.rng.random_bool(0.3)
+            } else {
+                false
+            }
+        };
+
+        if use_fire {
+            if can_use_snow {
+                // Add snow + fire conversion (only in Winter)
+                self.add_fire_conversion_step(chain, graph)?;
+            } else {
+                // Add blocking fire puzzle
+                self.add_blocking_fire_step(chain, graph)?;
+            }
         } else {
             // Add simple water source
             self.add_simple_water_source(chain, graph)?;
@@ -146,6 +174,55 @@ impl CausalityGenerator {
             cause: Cause::Player,
             terrain: SmartTerrain::WaterSource,
             location: node,
+        });
+
+        Ok(())
+    }
+
+    /// Adds a blocking fire step (extinguish fire to get water)
+    fn add_blocking_fire_step(
+        &mut self,
+        chain: &mut CausalityChain,
+        graph: &PlatformGraph,
+    ) -> Result<(), String> {
+        let available_nodes: Vec<NodeId> = graph
+            .reachable_from(graph.start)
+            .into_iter()
+            .filter(|&n| n != graph.goal)
+            .collect();
+
+        if available_nodes.len() < 2 {
+            return Err("Not enough nodes for blocking fire".to_string());
+        }
+
+        // Pick two different nodes for water source behind fire and the fire itself
+        let water_node = available_nodes[self.rng.random_range(0..available_nodes.len())];
+        let mut fire_node = available_nodes[self.rng.random_range(0..available_nodes.len())];
+
+        // Ensure fire is not at the same location as water
+        while fire_node == water_node && available_nodes.len() > 1 {
+            fire_node = available_nodes[self.rng.random_range(0..available_nodes.len())];
+        }
+
+        // Step 1: Extinguish blocking fire to gain access
+        chain.add_node(CausalityNode {
+            effect: Effect::WaterBucket,  // Extinguishing gives water
+            cause: Cause::BucketAt {
+                content: BucketContent::Water,
+                location: fire_node,
+            },
+            terrain: SmartTerrain::BlockingFire {
+                extinguished: false,
+            },
+            location: fire_node,
+        });
+
+        // Step 2: Get water from source behind the fire
+        chain.add_node(CausalityNode {
+            effect: Effect::WaterBucket,
+            cause: Cause::Player,
+            terrain: SmartTerrain::WaterSource,
+            location: water_node,
         });
 
         Ok(())
@@ -184,14 +261,14 @@ impl CausalityGenerator {
             location: snow_node,
         });
 
-        // Step 2: Convert snow to water at fire
+        // Step 2: Convert snow to water at fire (snow-melting fire, no wall)
         chain.add_node(CausalityNode {
             effect: Effect::WaterBucket,
             cause: Cause::BucketAt {
                 content: BucketContent::Snow,
                 location: fire_node,
             },
-            terrain: SmartTerrain::Fire {
+            terrain: SmartTerrain::SnowMeltFire {
                 extinguished: false,
             },
             location: fire_node,
@@ -239,7 +316,7 @@ impl CausalityGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::level::graph::{ConnectionType, PlatformNode};
+    use crate::game::level::graph::{ConnectionType, LayoutDirection, PlatformNode};
 
     fn create_simple_graph() -> PlatformGraph {
         let mut graph = PlatformGraph::new(NodeId(0), NodeId(2));
@@ -255,11 +332,21 @@ mod tests {
         graph
             .get_node_mut(id1)
             .unwrap()
-            .add_edge(id2, ConnectionType::Jump);
+            .add_edge(
+                id2,
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Right,
+                },
+            );
         graph
             .get_node_mut(id2)
             .unwrap()
-            .add_edge(id3, ConnectionType::Jump);
+            .add_edge(
+                id3,
+                ConnectionType::Jump {
+                    direction: LayoutDirection::Right,
+                },
+            );
 
         graph
     }
@@ -270,6 +357,8 @@ mod tests {
         let config = GeneratorConfig {
             difficulty: Difficulty::Easy,
             seed: 42,
+            season: Season::Summer,
+            completed_year: false,
         };
 
         let mut generator = CausalityGenerator::new(config);
@@ -287,6 +376,8 @@ mod tests {
         let config = GeneratorConfig {
             difficulty: Difficulty::Easy,
             seed: 42,
+            season: Season::Summer,
+            completed_year: false,
         };
 
         let mut generator = CausalityGenerator::new(config);

@@ -7,7 +7,7 @@ use super::parallax::{parallax_background, scroll_parallax};
 use super::tiles::{GridPosition, TerrainTile};
 use crate::{
     PausableSystems,
-    game::{GameLevel, Season},
+    game::{CompletedYear, GameLevel, Season},
     screens::Screen,
 };
 
@@ -49,6 +49,7 @@ pub fn spawn_level(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     season: Res<Season>,
+    completed_year: Res<CompletedYear>,
     game_level: Res<GameLevel>,
     mut spawn_point: ResMut<PlayerSpawnPoint>,
 ) {
@@ -69,9 +70,24 @@ pub fn spawn_level(
     // Generate a randomized procedural level
     let mut graph = create_random_linear_segment(platform_count, seed);
 
+    // Calculate difficulty based on season and completion
+    let difficulty = if completed_year.0 {
+        // After completing a year, stay on Hard
+        Difficulty::Hard
+    } else {
+        match *season {
+            Season::Summer => Difficulty::Easy,
+            Season::Autumn => Difficulty::Medium,
+            Season::Winter => Difficulty::Medium,
+            Season::Spring => Difficulty::Hard,
+        }
+    };
+
     let config = GeneratorConfig {
-        difficulty: Difficulty::Easy,
+        difficulty,
         seed,
+        season: *season,
+        completed_year: completed_year.0,
     };
 
     let mut generator = CausalityGenerator::new(config);
