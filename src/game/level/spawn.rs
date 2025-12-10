@@ -467,7 +467,12 @@ fn spawn_goal_platform(
     let center_x = platform_x_tiles + platform_width_tiles / 2;
     let container_y = platform_y_tiles + layout.height_tiles + 1;
     let container_grid_pos = GridPosition::primary(center_x, container_y);
-    spawn_container(commands, asset_server, container_grid_pos, ContainerState::Empty);
+    spawn_container(
+        commands,
+        asset_server,
+        container_grid_pos,
+        ContainerState::Empty,
+    );
 
     // Spawn ground support (dirt to GROUND_LEVEL)
     let ground_y_tiles = (GROUND_LEVEL / TILE_SIZE) as i32;
@@ -507,7 +512,8 @@ fn spawn_fire_wall(commands: &mut Commands, fire_grid_pos: GridPosition) {
     // Spawn 2-tile wide, 5-tile high wall above the fire
     for y_offset in 1..=5 {
         for x_offset in -1..=0 {
-            let grid_pos = GridPosition::primary(fire_grid_pos.x + x_offset, fire_grid_pos.y + y_offset);
+            let grid_pos =
+                GridPosition::primary(fire_grid_pos.x + x_offset, fire_grid_pos.y + y_offset);
             commands.spawn((
                 Name::new(format!("Fire wall at ({}, {})", grid_pos.x, grid_pos.y)),
                 grid_pos,
