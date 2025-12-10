@@ -108,7 +108,6 @@ pub fn spawn_level(
 
                     let templates: [fn(u64) -> PlatformGraph; 3] = [
                         |s| create_linear_template(Some(s)),
-                        |_| create_zigzag_template(),
                         |_| create_ground_and_floating_template(),
                     ];
 
