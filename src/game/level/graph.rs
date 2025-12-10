@@ -365,9 +365,9 @@ impl PlatformGraph {
                         | LayoutDirection::LeftUp
                         | LayoutDirection::RightDown
                         | LayoutDirection::LeftDown => {
-                            (MAX_JUMP_HEIGHT_TILES + 1, MAX_HEIGHT_DELTA_TILES + 1)
+                            (MAX_JUMP_HEIGHT_TILES, MAX_HEIGHT_DELTA_TILES)
                         }
-                        _ => (MAX_JUMP_HEIGHT_TILES, MAX_HEIGHT_DELTA_TILES),
+                        _ => (MAX_JUMP_HEIGHT_TILES - 1, MAX_HEIGHT_DELTA_TILES - 1),
                     };
 
                     let (max_jump_distance, max_horizontal_spacing) = match direction {
