@@ -312,25 +312,25 @@ pub fn create_zigzag_template() -> PlatformGraph {
     // Create platforms: Start, then zigzag pattern (up, down, up, down, up), then Goal
     let platforms = vec![
         PlatformNode::with_type(PlatformType::Start),
-        PlatformNode::new(), // Up
-        PlatformNode::new(), // Down
-        PlatformNode::new(), // Up
-        PlatformNode::new(), // Down
-        PlatformNode::new(), // Up
-        PlatformNode::new(), // Down (connecting to goal)
-        PlatformNode::with_type(PlatformType::Goal),
+        PlatformNode::new(),                         // RightUp
+        PlatformNode::new(),                         // LeftUp
+        PlatformNode::new(),                         // RightUp
+        PlatformNode::new(),                         // LeftUp
+        PlatformNode::new(),                         // RightUp
+        PlatformNode::new(),                         // Right (connecting to goal)
+        PlatformNode::with_type(PlatformType::Goal), // RightDown
     ];
 
     let ids: Vec<NodeId> = platforms.into_iter().map(|p| graph.add_node(p)).collect();
 
     // Connect with alternating directions
-    for i in 0..ids.len() - 1 {
+    for i in 0..ids.len() - 2 {
         let direction = if i % 2 == 0 {
             // Even index: go right and up
             LayoutDirection::RightUp
         } else {
-            // Odd index: go right and down
-            LayoutDirection::RightDown
+            // Odd index: go left and up
+            LayoutDirection::LeftUp
         };
 
         // Forward connection
@@ -342,7 +342,7 @@ pub fn create_zigzag_template() -> PlatformGraph {
         // Backward connection (opposite direction)
         let back_direction = match direction {
             LayoutDirection::RightUp => LayoutDirection::LeftDown,
-            LayoutDirection::RightDown => LayoutDirection::LeftUp,
+            LayoutDirection::LeftUp => LayoutDirection::RightDown,
             _ => LayoutDirection::Left,
         };
 
@@ -353,6 +353,20 @@ pub fn create_zigzag_template() -> PlatformGraph {
             },
         );
     }
+
+    graph.get_node_mut(ids[ids.len() - 2]).unwrap().add_edge(
+        ids[ids.len() - 1],
+        ConnectionType::Jump {
+            direction: LayoutDirection::Right,
+        },
+    );
+
+    graph.get_node_mut(ids[ids.len() - 1]).unwrap().add_edge(
+        ids[ids.len() - 2],
+        ConnectionType::Jump {
+            direction: LayoutDirection::Left,
+        },
+    );
 
     graph
 }
@@ -396,18 +410,18 @@ pub fn create_ground_and_floating_template() -> PlatformGraph {
     graph.get_node_mut(ids[1]).unwrap().add_edge(
         ids[2],
         ConnectionType::Jump {
-            direction: LayoutDirection::Right,
+            direction: LayoutDirection::RightDown,
         },
     );
     graph.get_node_mut(ids[2]).unwrap().add_edge(
         ids[1],
         ConnectionType::Jump {
-            direction: LayoutDirection::Left,
+            direction: LayoutDirection::LeftUp,
         },
     );
 
-    // Grounded 2 to floating 1 (up)
-    graph.get_node_mut(ids[2]).unwrap().add_edge(
+    // Grounded 1 to floating 1 (up)
+    graph.get_node_mut(ids[1]).unwrap().add_edge(
         ids[3],
         ConnectionType::Jump {
             direction: LayoutDirection::RightUp,
@@ -466,13 +480,13 @@ pub fn create_ground_and_floating_template() -> PlatformGraph {
     graph.get_node_mut(ids[6]).unwrap().add_edge(
         ids[7],
         ConnectionType::Jump {
-            direction: LayoutDirection::Right,
+            direction: LayoutDirection::RightUp,
         },
     );
     graph.get_node_mut(ids[7]).unwrap().add_edge(
         ids[6],
         ConnectionType::Jump {
-            direction: LayoutDirection::Left,
+            direction: LayoutDirection::LeftDown,
         },
     );
 
