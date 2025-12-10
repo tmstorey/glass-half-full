@@ -291,10 +291,9 @@ fn spawn_start_platform(
     let platform_x_tiles = layout.grid_x;
     let platform_y_tiles = layout.grid_y;
 
-    // Generate water layout
-    let middle_count = rng.random_range(1..=3);
-    let total_water_width = 2;
-    let water_start_x = platform_x_tiles + ((platform_width_tiles - middle_count - 2) / 2);
+    // Generate water layout: 2-3 tiles wide, starting right next to the left wall
+    let water_width = rng.random_range(2..=3);
+    let water_start_x = platform_x_tiles + 2; // Start right at the platform edge (next to wall)
 
     // Spawn platform tiles (2 tiles high)
     for y_offset in 0..layout.height_tiles {
@@ -306,7 +305,7 @@ fn spawn_start_platform(
             // Skip top layer where water will be
             if y_offset == layout.height_tiles - 1
                 && tile_x >= water_start_x
-                && tile_x < water_start_x + total_water_width + 1
+                && tile_x < water_start_x + water_width - 1
             {
                 continue;
             }
@@ -325,23 +324,59 @@ fn spawn_start_platform(
         }
     }
 
-    // Spawn water tiles
-    for x_offset in 0..=total_water_width + 2 {
-        let z = if x_offset <= 0 || x_offset > total_water_width + 1 {
+    // Spawn water tiles (extend right from the wall)
+    let water_y = platform_y_tiles + layout.height_tiles;
+    for x_offset in 0..=water_width {
+        let z = if x_offset <= 0 || x_offset > water_width - 1 {
             -0.1
         } else {
             20.
         };
         let tile_x = water_start_x + x_offset;
-        let water_grid_pos = GridPosition::primary(tile_x, platform_y_tiles + layout.height_tiles);
+        let water_grid_pos = GridPosition::primary(tile_x, water_y);
+
+        // Leftmost water tile is the waterfall base
+        let water_type = if x_offset == 1 {
+            WaterType::WaterfallBase
+        } else {
+            WaterType::WaterMiddle
+        };
+
+        spawn_water(commands, asset_server, water_grid_pos, water_type, z);
+    }
+
+    // Spawn waterfall tiles above the leftmost water tile
+    let waterfall_x = water_start_x + 1;
+    let waterfall_middle_count = rng.random_range(1..=2);
+
+    // WaterfallLower (1 tile above base)
+    spawn_water(
+        commands,
+        asset_server,
+        GridPosition::primary(waterfall_x, water_y + 1),
+        WaterType::WaterfallLower,
+        20.0,
+    );
+
+    // WaterfallMiddle (1-2 tiles)
+    for i in 0..waterfall_middle_count {
         spawn_water(
             commands,
             asset_server,
-            water_grid_pos,
-            WaterType::WaterMiddle,
-            z,
+            GridPosition::primary(waterfall_x, water_y + 2 + i),
+            WaterType::WaterfallMiddle,
+            20.0,
         );
     }
+
+    // WaterfallTop (at the top)
+    spawn_water(
+        commands,
+        asset_server,
+        GridPosition::primary(waterfall_x, water_y + 2 + waterfall_middle_count),
+        WaterType::WaterfallTop,
+        20.0,
+    );
 
     // Spawn ground support (dirt to GROUND_LEVEL)
     let ground_y_tiles = (GROUND_LEVEL / TILE_SIZE) as i32;
@@ -474,11 +509,8 @@ pub fn update_player_spawn_point(
     spawn_point: &mut PlayerSpawnPoint,
 ) {
     if let Some(start_layout) = layouts.get(&graph.start) {
-        let center_world = start_layout.center_world();
-        spawn_point.position = Vec3::new(
-            center_world.x,
-            start_layout.top_world() + TILE_SIZE * 4.0,
-            0.0,
-        );
+        // Position player 6 tiles to the right of the left edge of the platform
+        let spawn_x = (start_layout.grid_x + 6) as f32 * TILE_SIZE;
+        spawn_point.position = Vec3::new(spawn_x, start_layout.top_world() + TILE_SIZE * 4.0, 0.0);
     }
 }

@@ -15,7 +15,7 @@ pub struct ParallaxLayer {
 
 pub fn parallax_background(season: Season, asset_server: AssetServer) -> impl Bundle {
     let mut children = vec![];
-    let scroll_factors = [0.1, 0.5, 0.7, 0.95, 1.0];
+    let scroll_factors = [0.3, 0.5, 0.7, 0.95, 1.0];
     for layer in 1..=5 {
         let z = layer as f32;
         let scroll_factor = scroll_factors[layer - 1];

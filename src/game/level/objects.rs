@@ -78,7 +78,7 @@ impl FireAnimation {
         Self {
             timer: Timer::from_seconds(0.1, TimerMode::Repeating),
             current_frame: 0,
-            frame_count: 40, // 5 columns � 8 rows
+            frame_count: 40, // 5 columns & 8 rows
         }
     }
 
@@ -358,6 +358,7 @@ pub fn spawn_water(
                     layout: asset_server.add(layout),
                     index: water_type.row_index() * 20, // Start at first frame of the row
                 }),
+                flip_x: true,
                 ..default()
             },
             Visibility::default(),

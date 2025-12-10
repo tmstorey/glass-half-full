@@ -297,7 +297,7 @@ fn camera_follow_player(
     };
 
     let smoothness = 10.0; // Higher = faster following
-    let y_offset = 64.0;
+    let y_offset = 32.0;
     let dt = time.delta_secs();
 
     camera_transform.translation.x = camera_transform.translation.x

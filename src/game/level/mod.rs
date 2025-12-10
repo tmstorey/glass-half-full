@@ -85,69 +85,95 @@ pub fn spawn_level(
         }
     };
 
-    // Generate graph(s) based on difficulty
-    // Easy: Single graph
-    // Medium: Merge 2 graphs
-    // Hard: Merge 3 graphs
-    let mut graph = match difficulty {
-        Difficulty::Easy => {
-            // Single template graph with randomization
-            create_linear_template(Some(seed))
-        }
-        Difficulty::Medium => {
-            // Merge 2 template graphs
-            use rand::{Rng, SeedableRng};
-            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+    // Try to generate a valid level, with up to 10 retries
+    let max_retries = 10;
+    for attempt in 0..max_retries {
+        let attempt_seed = seed.wrapping_add(attempt as u64 * 10000);
 
-            let templates: [fn(u64) -> PlatformGraph; 5] = [
-                |s| create_linear_template(Some(s)),
-                |_| create_branching_template(),
-                |_| create_cul_de_sac_template(),
-                |_| create_zigzag_template(),
-                |_| create_ground_and_floating_template(),
-            ];
+        // Generate graph(s) based on difficulty
+        // Easy: Single graph (varied templates except first level)
+        // Medium: Merge 2 graphs
+        // Hard: Merge 3 graphs
+        let mut graph = match difficulty {
+            Difficulty::Easy => {
+                // First level (Summer level 1) always uses linear template
+                // All other easy levels use varied templates
+                let is_first_level = *season == Season::Summer && game_level.0 == 1;
 
-            let graph1 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(1));
-            let graph2 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(2));
+                if is_first_level {
+                    create_linear_template(Some(attempt_seed))
+                } else {
+                    use rand::{Rng, SeedableRng};
+                    let mut rng = rand::rngs::StdRng::seed_from_u64(attempt_seed);
 
-            merge_graphs(vec![graph1, graph2])
-        }
-        Difficulty::Hard => {
-            // Merge 3 template graphs
-            use rand::{Rng, SeedableRng};
-            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+                    let templates: [fn(u64) -> PlatformGraph; 3] = [
+                        |s| create_linear_template(Some(s)),
+                        |_| create_zigzag_template(),
+                        |_| create_ground_and_floating_template(),
+                    ];
 
-            let templates: [fn(u64) -> PlatformGraph; 5] = [
-                |s| create_linear_template(Some(s)),
-                |_| create_branching_template(),
-                |_| create_cul_de_sac_template(),
-                |_| create_zigzag_template(),
-                |_| create_ground_and_floating_template(),
-            ];
+                    templates[rng.random_range(0..templates.len())](attempt_seed)
+                }
+            }
+            Difficulty::Medium => {
+                // Merge 2 template graphs
+                use rand::{Rng, SeedableRng};
+                let mut rng = rand::rngs::StdRng::seed_from_u64(attempt_seed);
 
-            let graph1 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(1));
-            let graph2 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(2));
-            let graph3 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(3));
+                let templates: [fn(u64) -> PlatformGraph; 5] = [
+                    |s| create_linear_template(Some(s)),
+                    |_| create_branching_template(),
+                    |_| create_cul_de_sac_template(),
+                    |_| create_zigzag_template(),
+                    |_| create_ground_and_floating_template(),
+                ];
 
-            merge_graphs(vec![graph1, graph2, graph3])
-        }
-    };
+                let graph1 =
+                    templates[rng.random_range(0..templates.len())](attempt_seed.wrapping_add(1));
+                let graph2 =
+                    templates[rng.random_range(0..templates.len())](attempt_seed.wrapping_add(2));
 
-    let config = GeneratorConfig {
-        difficulty,
-        seed,
-        season: *season,
-        completed_year: completed_year.0,
-    };
+                merge_graphs(vec![graph1, graph2])
+            }
+            Difficulty::Hard => {
+                // Merge 3 template graphs
+                use rand::{Rng, SeedableRng};
+                let mut rng = rand::rngs::StdRng::seed_from_u64(attempt_seed);
 
-    let mut generator = CausalityGenerator::new(config);
+                let templates: [fn(u64) -> PlatformGraph; 5] = [
+                    |s| create_linear_template(Some(s)),
+                    |_| create_branching_template(),
+                    |_| create_cul_de_sac_template(),
+                    |_| create_zigzag_template(),
+                    |_| create_ground_and_floating_template(),
+                ];
 
-    if let Ok(chain) = generator.generate_chain(&graph)
-        && chain.validate().is_ok()
-    {
-        if generator.apply_chain_to_graph(&chain, &mut graph).is_ok() {
+                let graph1 =
+                    templates[rng.random_range(0..templates.len())](attempt_seed.wrapping_add(1));
+                let graph2 =
+                    templates[rng.random_range(0..templates.len())](attempt_seed.wrapping_add(2));
+                let graph3 =
+                    templates[rng.random_range(0..templates.len())](attempt_seed.wrapping_add(3));
+
+                merge_graphs(vec![graph1, graph2, graph3])
+            }
+        };
+
+        let config = GeneratorConfig {
+            difficulty,
+            seed: attempt_seed,
+            season: *season,
+            completed_year: completed_year.0,
+        };
+
+        let mut generator = CausalityGenerator::new(config);
+
+        if let Ok(chain) = generator.generate_chain(&graph)
+            && chain.validate().is_ok()
+            && generator.apply_chain_to_graph(&chain, &mut graph).is_ok()
+        {
             // Generate concrete layout from the abstract graph (Phase 2: Layout generation)
-            let layouts = graph.generate_layout(seed);
+            let layouts = graph.generate_layout(attempt_seed);
 
             // Update spawn point based on generated level
             update_player_spawn_point(&graph, &layouts, &mut spawn_point);
@@ -155,12 +181,30 @@ pub fn spawn_level(
             // Spawn entire level in one pass
             spawn_level_from_graph(&mut commands, &asset_server, &graph, &layouts);
 
-            info!("Successfully generated procedural level");
+            info!(
+                "Successfully generated procedural level (attempt {})",
+                attempt + 1
+            );
+            return; // Success! Exit the system
         }
-    } else {
-        warn!("Failed to generate procedural level, falling back to flat level");
-        spawn_flat_level(&mut commands, 40, -2, 6);
+
+        warn!(
+            "Level generation attempt {} failed, retrying...",
+            attempt + 1
+        );
     }
+
+    // If we get here, all retries failed - this should be very rare
+    error!(
+        "Failed to generate level after {} attempts! Using fallback linear template",
+        max_retries
+    );
+
+    // Last resort: use basic linear template without any smart terrain
+    let graph = create_linear_template(Some(seed));
+    let layouts = graph.generate_layout(seed);
+    update_player_spawn_point(&graph, &layouts, &mut spawn_point);
+    spawn_level_from_graph(&mut commands, &asset_server, &graph, &layouts);
 }
 
 /// System to handle level completion and transition to victory screen
@@ -174,21 +218,5 @@ fn handle_level_complete(
         // Transition to Victory screen
         // The victory screen will handle incrementing the level and transitioning to Gameplay
         next_state.set(Screen::Victory);
-    }
-}
-
-/// Spawns a flat grass level
-pub fn spawn_flat_level(commands: &mut Commands, width: i32, ground_y: i32, thickness: i32) {
-    for x in 0..width {
-        for y in 0..thickness {
-            let grid_pos = GridPosition::primary(x, ground_y - y);
-
-            commands.spawn((
-                Name::new(format!("Terrain at ({}, {})", x, ground_y - y)),
-                grid_pos,
-                TerrainTile::Grass,
-                DespawnOnExit(Screen::Gameplay),
-            ));
-        }
     }
 }

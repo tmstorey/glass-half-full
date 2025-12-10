@@ -359,9 +359,28 @@ impl PlatformGraph {
                         LayoutDirection::LeftDown => (-1, -1), // Move left and prefer downward
                     };
 
+                    // Allow 1 extra tile based on direction for more varied layouts
+                    let (max_jump_height, max_height_delta) = match direction {
+                        LayoutDirection::RightUp
+                        | LayoutDirection::LeftUp
+                        | LayoutDirection::RightDown
+                        | LayoutDirection::LeftDown => {
+                            (MAX_JUMP_HEIGHT_TILES + 1, MAX_HEIGHT_DELTA_TILES + 1)
+                        }
+                        _ => (MAX_JUMP_HEIGHT_TILES, MAX_HEIGHT_DELTA_TILES),
+                    };
+
+                    let (max_jump_distance, max_horizontal_spacing) = match direction {
+                        LayoutDirection::Right | LayoutDirection::Left => (
+                            MAX_JUMP_DISTANCE_TILES + 1,
+                            MAX_HORIZONTAL_SPACING_TILES + 1,
+                        ),
+                        _ => (MAX_JUMP_DISTANCE_TILES, MAX_HORIZONTAL_SPACING_TILES),
+                    };
+
                     // Calculate edge-to-edge spacing (gap between platforms)
-                    let gap_tiles = rng
-                        .random_range(MIN_HORIZONTAL_SPACING_TILES..=MAX_HORIZONTAL_SPACING_TILES);
+                    let gap_tiles =
+                        rng.random_range(MIN_HORIZONTAL_SPACING_TILES..=max_horizontal_spacing);
 
                     // Position next platform based on direction
                     let next_grid_x = if x_direction > 0 {
@@ -375,10 +394,10 @@ impl PlatformGraph {
                     // Calculate vertical position with directional bias
                     let y_delta = if y_bias != 0 {
                         // Biased direction: prefer up or down
-                        rng.random_range(0..=MAX_HEIGHT_DELTA_TILES) * y_bias
+                        rng.random_range(0..=max_height_delta) * y_bias
                     } else {
                         // Neutral direction: randomize
-                        rng.random_range(MIN_HEIGHT_DELTA_TILES..=MAX_HEIGHT_DELTA_TILES)
+                        rng.random_range(MIN_HEIGHT_DELTA_TILES..=max_height_delta)
                     };
                     let mut next_grid_y = (current_layout.grid_y + y_delta).max(0);
 
@@ -387,11 +406,9 @@ impl PlatformGraph {
                     let vertical_dist = next_grid_y - current_layout.grid_y;
 
                     // Adjust if jump is invalid
-                    if horizontal_dist > MAX_JUMP_DISTANCE_TILES
-                        || vertical_dist > MAX_JUMP_HEIGHT_TILES
-                    {
+                    if horizontal_dist > max_jump_distance || vertical_dist > max_jump_height {
                         // Bring it closer to current platform's height
-                        next_grid_y = current_layout.grid_y + (MAX_HEIGHT_DELTA_TILES - 1);
+                        next_grid_y = current_layout.grid_y + (max_height_delta - 1);
                         next_grid_y = next_grid_y.max(0);
                     }
 
