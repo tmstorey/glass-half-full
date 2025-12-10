@@ -65,7 +65,7 @@ pub fn spawn_level(
     // If year is completed, add randomness for variety on subsequent playthroughs
     let seed = if completed_year.0 {
         use rand::Rng;
-        let base_seed = (*season as u64) * 1000 + game_level.0 as u64;
+        let base_seed = (*season as u64) * 100 + game_level.0 as u64;
         let random_offset = rand::rng().random_range(0..1000000);
         base_seed.wrapping_add(random_offset)
     } else {
