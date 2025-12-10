@@ -24,6 +24,8 @@ fn setup_input(mut commands: Commands) {
     input_map.insert_dual_axis(Action::Run, GamepadStick::LEFT);
 
     input_map.insert(Action::Jump, KeyCode::Space);
+    input_map.insert(Action::Jump, KeyCode::KeyW);
+    input_map.insert(Action::Jump, KeyCode::ArrowUp);
     input_map.insert(Action::Jump, GamepadButton::South);
 
     input_map.insert(Action::Use, KeyCode::KeyE);

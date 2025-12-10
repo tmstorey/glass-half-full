@@ -252,6 +252,26 @@ pub struct TilesetAtlases {
     pub autumn: Handle<Image>,
     #[dependency]
     pub winter: Handle<Image>,
+    #[dependency]
+    pub container: Handle<Image>,
+    #[dependency]
+    pub fire: Handle<Image>,
+    #[dependency]
+    pub fire_extinguished: Handle<Image>,
+    #[dependency]
+    pub snow: Handle<Image>,
+    #[dependency]
+    pub water: Handle<Image>,
+    #[dependency]
+    pub player_body: Handle<Image>,
+    #[dependency]
+    pub player_hair: Handle<Image>,
+    #[dependency]
+    pub player_underclothes: Handle<Image>,
+    #[dependency]
+    pub player_footwear: Handle<Image>,
+    #[dependency]
+    pub player_clothes: Handle<Image>,
 }
 
 impl FromWorld for TilesetAtlases {
@@ -270,6 +290,16 @@ impl FromWorld for TilesetAtlases {
             summer: assets.load("images/tiles/summer.epng"),
             autumn: assets.load("images/tiles/autumn.epng"),
             winter: assets.load("images/tiles/winter.epng"),
+            container: assets.load("images/objects/container.epng"),
+            fire: assets.load("images/objects/fire.epng"),
+            fire_extinguished: assets.load("images/objects/fire-extinguished.epng"),
+            snow: assets.load("images/objects/snow.epng"),
+            water: assets.load("images/objects/water.epng"),
+            player_body: assets.load("images/character/body/3.epng"),
+            player_hair: assets.load("images/character/hair/1/black.epng"),
+            player_underclothes: assets.load("images/character/underclothes/bodice1/blue.epng"),
+            player_footwear: assets.load("images/character/footwear/boots.epng"),
+            player_clothes: assets.load("images/character/clothes/sleeve-dress.epng"),
         }
     }
 }
