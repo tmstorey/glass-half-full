@@ -22,7 +22,7 @@ fn spawn_victory_screen(
     completed_year: Res<CompletedYear>,
     asset_server: Res<AssetServer>,
 ) {
-    let complete_message = if game_level.0 == 10 {
+    let complete_message = if game_level.0 >= 3 {
         if *season == Season::Spring {
             "You completed a whole year!".to_string()
         } else {
@@ -188,7 +188,7 @@ fn handle_continue(
         // Increment level
         game_level.0 = game_level.0.saturating_add(1);
 
-        if game_level.0 > 10 {
+        if game_level.0 > 3 {
             if !completed_year.0 {
                 player_level.0 += 1;
                 if *season == Season::Spring {
@@ -198,7 +198,7 @@ fn handle_continue(
                 player_level.0 += 1;
             }
             *season = season.next();
-            game_level.0 %= 10;
+            game_level.0 %= 3;
         }
 
         info!("Continuing to {} Level {}", *season, game_level.0);
