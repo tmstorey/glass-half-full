@@ -106,7 +106,7 @@ pub fn spawn_level(
                     use rand::{Rng, SeedableRng};
                     let mut rng = rand::rngs::StdRng::seed_from_u64(attempt_seed);
 
-                    let templates: [fn(u64) -> PlatformGraph; 3] = [
+                    let templates: [fn(u64) -> PlatformGraph; 2] = [
                         |s| create_linear_template(Some(s)),
                         |_| create_ground_and_floating_template(),
                     ];
@@ -119,11 +119,11 @@ pub fn spawn_level(
                 use rand::{Rng, SeedableRng};
                 let mut rng = rand::rngs::StdRng::seed_from_u64(attempt_seed);
 
-                let templates: [fn(u64) -> PlatformGraph; 5] = [
+                let templates: [fn(u64) -> PlatformGraph; 4] = [
                     |s| create_linear_template(Some(s)),
                     |_| create_branching_template(),
                     |_| create_cul_de_sac_template(),
-                    |_| create_zigzag_template(),
+                    //|_| create_zigzag_template(),
                     |_| create_ground_and_floating_template(),
                 ];
 
@@ -139,11 +139,11 @@ pub fn spawn_level(
                 use rand::{Rng, SeedableRng};
                 let mut rng = rand::rngs::StdRng::seed_from_u64(attempt_seed);
 
-                let templates: [fn(u64) -> PlatformGraph; 5] = [
+                let templates: [fn(u64) -> PlatformGraph; 4] = [
                     |s| create_linear_template(Some(s)),
                     |_| create_branching_template(),
                     |_| create_cul_de_sac_template(),
-                    |_| create_zigzag_template(),
+                    //|_| create_zigzag_template(),
                     |_| create_ground_and_floating_template(),
                 ];
 
