@@ -179,7 +179,7 @@ pub fn spawn_level(
             update_player_spawn_point(&graph, &layouts, &mut spawn_point);
 
             // Spawn entire level in one pass
-            spawn_level_from_graph(&mut commands, &asset_server, &graph, &layouts);
+            spawn_level_from_graph(&mut commands, &asset_server, &graph, &layouts, *season);
 
             info!(
                 "Successfully generated procedural level (attempt {})",
@@ -204,7 +204,7 @@ pub fn spawn_level(
     let graph = create_linear_template(Some(seed));
     let layouts = graph.generate_layout(seed);
     update_player_spawn_point(&graph, &layouts, &mut spawn_point);
-    spawn_level_from_graph(&mut commands, &asset_server, &graph, &layouts);
+    spawn_level_from_graph(&mut commands, &asset_server, &graph, &layouts, *season);
 }
 
 /// System to handle level completion and transition to victory screen

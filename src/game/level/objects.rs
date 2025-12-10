@@ -102,7 +102,7 @@ impl FireAnimation {
 pub fn spawn_fire(
     commands: &mut Commands,
     asset_server: &AssetServer,
-    position: Vec3,
+    grid_pos: crate::game::tiles::GridPosition,
     state: FireState,
 ) -> Entity {
     let texture = match state {
@@ -130,6 +130,7 @@ pub fn spawn_fire(
     let mut entity_commands = commands.spawn((
         Name::new("Fire"),
         Fire::new(state),
+        grid_pos,
         Sprite {
             image: texture,
             texture_atlas: Some(TextureAtlas {
@@ -138,7 +139,7 @@ pub fn spawn_fire(
             }),
             ..default()
         },
-        Transform::from_translation(position),
+        Transform::default(),
         Visibility::default(),
         DespawnOnExit(Screen::Gameplay),
     ));
@@ -209,17 +210,22 @@ pub fn update_fire_state(
 pub struct Snow;
 
 /// Spawns a snow sprite at the specified position
-pub fn spawn_snow(commands: &mut Commands, asset_server: &AssetServer, position: Vec3) -> Entity {
+pub fn spawn_snow(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    grid_pos: crate::game::tiles::GridPosition,
+) -> Entity {
     commands
         .spawn((
             Name::new("Snow"),
             Snow,
+            grid_pos,
             Sprite {
                 image: asset_server.load("images/objects/snow.epng"),
                 custom_size: Some(Vec2::new(64.0, 32.0)),
                 ..default()
             },
-            Transform::from_translation(position),
+            Transform::default(),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
         ))
@@ -446,7 +452,7 @@ impl Container {
 pub fn spawn_container(
     commands: &mut Commands,
     asset_server: &AssetServer,
-    position: Vec3,
+    grid_pos: crate::game::tiles::GridPosition,
     state: ContainerState,
 ) -> Entity {
     let texture = asset_server.load("images/objects/container.epng");
@@ -462,6 +468,7 @@ pub fn spawn_container(
         .spawn((
             Name::new(format!("Container {:?}", state)),
             Container::new(state),
+            grid_pos,
             Sprite {
                 image: texture,
                 texture_atlas: Some(TextureAtlas {
@@ -470,7 +477,7 @@ pub fn spawn_container(
                 }),
                 ..default()
             },
-            Transform::from_translation(position),
+            Transform::default(),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
         ))
