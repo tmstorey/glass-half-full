@@ -206,7 +206,7 @@ impl CausalityGenerator {
 
         // Step 1: Extinguish blocking fire to gain access
         chain.add_node(CausalityNode {
-            effect: Effect::WaterBucket,  // Extinguishing gives water
+            effect: Effect::WaterBucket, // Extinguishing gives water
             cause: Cause::BucketAt {
                 content: BucketContent::Water,
                 location: fire_node,
@@ -329,24 +329,18 @@ mod tests {
         let id2 = graph.add_node(node2);
         let id3 = graph.add_node(node3);
 
-        graph
-            .get_node_mut(id1)
-            .unwrap()
-            .add_edge(
-                id2,
-                ConnectionType::Jump {
-                    direction: LayoutDirection::Right,
-                },
-            );
-        graph
-            .get_node_mut(id2)
-            .unwrap()
-            .add_edge(
-                id3,
-                ConnectionType::Jump {
-                    direction: LayoutDirection::Right,
-                },
-            );
+        graph.get_node_mut(id1).unwrap().add_edge(
+            id2,
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
+        graph.get_node_mut(id2).unwrap().add_edge(
+            id3,
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
 
         graph
     }

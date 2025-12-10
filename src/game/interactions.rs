@@ -4,8 +4,8 @@ use leafwing_input_manager::prelude::*;
 use super::character::Character;
 use super::controls::Action;
 use super::level::BucketContent;
-use super::level::objects::{Container, Fire, Snow, Water};
 use super::level::PlayerSpawnPoint;
+use super::level::objects::{Container, Fire, Snow, Water};
 use crate::PausableSystems;
 use crate::screens::Screen;
 

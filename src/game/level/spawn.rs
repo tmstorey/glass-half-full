@@ -255,8 +255,7 @@ fn spawn_other_terrain_objects(
                 spawn_fire(commands, asset_server, world_pos, fire_state);
             }
             SmartTerrain::GoalContainer { .. } => {
-                let container_pos =
-                    Vec3::new(center_world.x, layout.top_world() + TILE_SIZE, 0.0);
+                let container_pos = Vec3::new(center_world.x, layout.top_world() + TILE_SIZE, 0.0);
                 spawn_container(commands, asset_server, container_pos, ContainerState::Empty);
             }
             SmartTerrain::SwitchContainer { .. } => {
@@ -459,10 +458,7 @@ fn spawn_fire_wall(commands: &mut Commands, _layout: &PlatformLayout, fire_world
         for x_offset in -1..=1 {
             let grid_pos = GridPosition::primary(fire_grid_x + x_offset, fire_grid_y + y_offset);
             commands.spawn((
-                Name::new(format!(
-                    "Fire wall at ({}, {})",
-                    grid_pos.x, grid_pos.y
-                )),
+                Name::new(format!("Fire wall at ({}, {})", grid_pos.x, grid_pos.y)),
                 grid_pos,
                 TerrainTile::Grass,
                 DespawnOnExit(Screen::Gameplay),

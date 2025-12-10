@@ -7,9 +7,10 @@ use bevy::prelude::*;
 pub struct NodeId(pub usize);
 
 /// Layout direction hint for platform placement
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum LayoutDirection {
     /// Horizontal jump to the right
+    #[default]
     Right,
     /// Horizontal jump to the left
     Left,
@@ -21,12 +22,6 @@ pub enum LayoutDirection {
     RightDown,
     /// Fall/jump diagonally down and to the left
     LeftDown,
-}
-
-impl Default for LayoutDirection {
-    fn default() -> Self {
-        Self::Right
-    }
 }
 
 /// Represents the type of connection between platforms
@@ -380,10 +375,7 @@ impl PlatformGraph {
                     // Calculate vertical position with directional bias
                     let y_delta = if y_bias != 0 {
                         // Biased direction: prefer up or down
-                        let biased_delta = rng
-                            .random_range(0..=MAX_HEIGHT_DELTA_TILES)
-                            * y_bias;
-                        biased_delta
+                        rng.random_range(0..=MAX_HEIGHT_DELTA_TILES) * y_bias
                     } else {
                         // Neutral direction: randomize
                         rng.random_range(MIN_HEIGHT_DELTA_TILES..=MAX_HEIGHT_DELTA_TILES)
@@ -436,24 +428,18 @@ mod tests {
         let id2 = graph.add_node(node2);
         let id3 = graph.add_node(node3);
 
-        graph
-            .get_node_mut(id1)
-            .unwrap()
-            .add_edge(
-                id2,
-                ConnectionType::Jump {
-                    direction: LayoutDirection::Right,
-                },
-            );
-        graph
-            .get_node_mut(id2)
-            .unwrap()
-            .add_edge(
-                id3,
-                ConnectionType::Jump {
-                    direction: LayoutDirection::Right,
-                },
-            );
+        graph.get_node_mut(id1).unwrap().add_edge(
+            id2,
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
+        graph.get_node_mut(id2).unwrap().add_edge(
+            id3,
+            ConnectionType::Jump {
+                direction: LayoutDirection::Right,
+            },
+        );
 
         assert!(graph.validate().is_ok());
     }

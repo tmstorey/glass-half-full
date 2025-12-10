@@ -28,8 +28,8 @@ pub use graph::{
 };
 pub use spawn::{PlayerSpawnPoint, spawn_level_from_graph, update_player_spawn_point};
 pub use templates::{
-    create_branching_template, create_cul_de_sac_template, create_linear_template,
-    create_random_linear_segment,
+    create_branching_template, create_cul_de_sac_template, create_ground_and_floating_template,
+    create_linear_template, create_zigzag_template, merge_graphs,
 };
 
 pub fn plugin(app: &mut App) {
@@ -61,14 +61,16 @@ pub fn spawn_level(
         children![parallax_background(*season, asset_server.clone())],
     ));
 
-    // Calculate platform count based on level (start with 5, increase gradually)
-    let platform_count = (5 + (game_level.0 / 2) as usize).min(10);
-
     // Use season and level to create unique seed
-    let seed = (*season as u64) * 1000 + game_level.0 as u64;
-
-    // Generate a randomized procedural level
-    let mut graph = create_random_linear_segment(platform_count, seed);
+    // If year is completed, add randomness for variety on subsequent playthroughs
+    let seed = if completed_year.0 {
+        use rand::Rng;
+        let base_seed = (*season as u64) * 1000 + game_level.0 as u64;
+        let random_offset = rand::rng().random_range(0..1000000);
+        base_seed.wrapping_add(random_offset)
+    } else {
+        (*season as u64) * 1000 + game_level.0 as u64
+    };
 
     // Calculate difficulty based on season and completion
     let difficulty = if completed_year.0 {
@@ -80,6 +82,54 @@ pub fn spawn_level(
             Season::Autumn => Difficulty::Medium,
             Season::Winter => Difficulty::Medium,
             Season::Spring => Difficulty::Hard,
+        }
+    };
+
+    // Generate graph(s) based on difficulty
+    // Easy: Single graph
+    // Medium: Merge 2 graphs
+    // Hard: Merge 3 graphs
+    let mut graph = match difficulty {
+        Difficulty::Easy => {
+            // Single template graph with randomization
+            create_linear_template(Some(seed))
+        }
+        Difficulty::Medium => {
+            // Merge 2 template graphs
+            use rand::{Rng, SeedableRng};
+            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+
+            let templates: [fn(u64) -> PlatformGraph; 5] = [
+                |s| create_linear_template(Some(s)),
+                |_| create_branching_template(),
+                |_| create_cul_de_sac_template(),
+                |_| create_zigzag_template(),
+                |_| create_ground_and_floating_template(),
+            ];
+
+            let graph1 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(1));
+            let graph2 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(2));
+
+            merge_graphs(vec![graph1, graph2])
+        }
+        Difficulty::Hard => {
+            // Merge 3 template graphs
+            use rand::{Rng, SeedableRng};
+            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+
+            let templates: [fn(u64) -> PlatformGraph; 5] = [
+                |s| create_linear_template(Some(s)),
+                |_| create_branching_template(),
+                |_| create_cul_de_sac_template(),
+                |_| create_zigzag_template(),
+                |_| create_ground_and_floating_template(),
+            ];
+
+            let graph1 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(1));
+            let graph2 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(2));
+            let graph3 = templates[rng.random_range(0..templates.len())](seed.wrapping_add(3));
+
+            merge_graphs(vec![graph1, graph2, graph3])
         }
     };
 

@@ -50,10 +50,7 @@ fn increment_season(
 }
 
 #[cfg(feature = "dev_native")]
-fn increment_level(
-    _: On<Pointer<Click>>,
-    mut next_screen: ResMut<NextState<Screen>>,
-) {
+fn increment_level(_: On<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
     next_screen.set(Screen::Victory);
 }
 

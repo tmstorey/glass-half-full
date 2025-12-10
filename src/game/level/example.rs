@@ -8,8 +8,8 @@ use crate::game::Season;
 pub fn generate_example_level() {
     println!("\n=== Procedural Level Generation Example ===\n");
 
-    // Create a simple linear platform graph
-    let mut graph = create_linear_template();
+    // Create a simple linear platform graph (default 5 platforms, no randomization)
+    let mut graph = create_linear_template(None);
     println!("Created platform graph with {} nodes", graph.nodes.len());
     println!("Start: {:?}, Goal: {:?}", graph.start, graph.goal);
 
