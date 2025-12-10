@@ -57,7 +57,6 @@ pub struct PlayerLevel(pub u8);
     Clone,
     Copy,
     Debug,
-    Default,
     Eq,
     PartialEq,
     Ord,
@@ -69,6 +68,12 @@ pub struct PlayerLevel(pub u8);
     Deserialize,
 )]
 pub struct GameLevel(pub u8);
+
+impl Default for GameLevel {
+    fn default() -> Self {
+        GameLevel(1)
+    }
+}
 
 #[derive(
     Clone,

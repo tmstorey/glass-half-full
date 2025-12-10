@@ -33,6 +33,7 @@ fn created_by() -> impl Bundle {
 
 fn assets() -> impl Bundle {
     grid(vec![
+        ["Pixel Art", "gandalfhardcore.itch.io"],
         ["Button SFX", "CC0 by Jaszunio15"],
         [
             "Bevy logo",
