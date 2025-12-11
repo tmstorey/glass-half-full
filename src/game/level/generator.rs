@@ -137,10 +137,16 @@ impl CausalityGenerator {
         if use_fire {
             if can_use_snow {
                 // Add snow + fire conversion (only in Winter)
-                self.add_fire_conversion_step(chain, graph)?;
+                if self.rng.random_bool(0.8) {
+                    self.add_fire_conversion_step(chain, graph)?;
+                } else {
+                    self.add_fire_conversion_step(chain, graph)?;
+                    self.add_blocking_fire_step(chain, graph)?;
+                }
             } else {
                 // Add blocking fire puzzle
                 self.add_blocking_fire_step(chain, graph)?;
+                self.add_simple_water_source(chain, graph)?;
             }
         } else {
             // Add simple water source
