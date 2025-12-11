@@ -69,7 +69,7 @@ pub fn spawn_level(
         let random_offset = rand::rng().random_range(0..1000000);
         base_seed.wrapping_add(random_offset)
     } else {
-        (*season as u64) * 1000 + game_level.0 as u64
+        (*season as u64) * 100 + game_level.0 as u64
     };
 
     // Calculate difficulty based on season and completion
