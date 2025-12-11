@@ -118,8 +118,8 @@ impl CausalityGenerator {
 
         // Decide whether to use fire mechanic
         let use_fire = if can_use_snow {
-            // In winter, 50% chance to use fire+snow puzzle
-            self.rng.random_bool(0.5)
+            // In winter, 80% chance to use fire+snow puzzle
+            self.rng.random_bool(0.8)
         } else {
             // In other seasons, can use BlockingFire from Autumn onwards
             let can_use_blocking_fire =
@@ -127,8 +127,8 @@ impl CausalityGenerator {
                     || self.config.completed_year;
 
             if can_use_blocking_fire && self.config.difficulty != Difficulty::Easy {
-                // 30% chance to use blocking fire puzzle
-                self.rng.random_bool(0.3)
+                // 50% chance to use blocking fire puzzle
+                self.rng.random_bool(0.5)
             } else {
                 false
             }

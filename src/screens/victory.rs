@@ -70,7 +70,7 @@ fn spawn_victory_screen(
                 TextColor(Color::WHITE),
             ));
 
-            if game_level.0 == 10 {
+            if game_level.0 == 3 {
                 parent.spawn((
                     Name::new("Unlocked Item Title"),
                     Text::new("Unlocked clothing items:"),
