@@ -339,8 +339,8 @@ fn spawn_start_platform(
         let fire_grid_pos = GridPosition::primary(resource_start_x + 1, resource_y + 1);
         spawn_fire(commands, asset_server, fire_grid_pos, FireState::Active);
 
-        // Snow is 2 tiles right of the fire
-        let snow_grid_pos = GridPosition::primary(resource_start_x + 3, resource_y + 1);
+        // Snow is 3 tiles right of the fire
+        let snow_grid_pos = GridPosition::primary(resource_start_x + 4, resource_y + 1);
         spawn_snow(commands, asset_server, snow_grid_pos);
     } else {
         // Non-winter: Spawn water tiles and waterfall

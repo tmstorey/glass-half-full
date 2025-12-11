@@ -204,8 +204,10 @@ fn interact_with_snow(
 
         if distance <= INTERACTION_RANGE {
             // Fill bucket with snow
-            *bucket_content = BucketContent::Snow;
-            info!("Picked up snow!");
+            if *bucket_content != BucketContent::Water {
+                *bucket_content = BucketContent::Snow;
+                info!("Picked up snow!");
+            }
             return; // Only interact with one snow source at a time
         }
     }
